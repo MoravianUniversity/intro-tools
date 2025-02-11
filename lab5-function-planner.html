@@ -238,7 +238,7 @@ function __checkIO(callIndex, funcIndex, name) {
 export function createCallGraph() {
     let element = document.getElementById("callgraph");
     element.innerHTML = "";
-    let code = "%%{init: {'theme':'forest'}}%%\nflowcart TD\n";
+    let code = "%%{init: {'theme':'forest'}}%%\nflowchart TD\n";
     for (let i = 0; i < functionNames.length; i++) {
         let name = functionNames[i];
         let calls = JSON.parse(localStorage.getItem(`calls${i}`));
