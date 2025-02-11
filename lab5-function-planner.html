@@ -1,0 +1,754 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Lab 5 Function Planner</title>
+<style>
+body { font-family: Arial, Helvetica, sans-serif; }
+
+#callgraph {
+    margin: 0.5em 1em;
+    max-width: 42em;
+}
+#callgraph > svg {
+    margin: 0 auto;
+    display: block;
+    width: auto !important;
+}
+
+.function {
+    margin: 1em 0;
+    padding: 0.75em;
+    border: 1px solid black;
+    border-radius: 1em;
+    width: 42em;
+    box-shadow: 0 0 0.5em black;
+}
+
+h2 { font-size: 1.25em; margin: 0; border-bottom: 2px solid black; }
+h2 input { font-size: 1.25em; font-family: monospace; width: calc(99% - 3em); }
+h2 input[type="button"] { float: right; font-size: 0.85em; margin-left: 0.5em !important; }
+h3 { font-size: 1.1em; margin: 1em 0 0 0; }
+
+textarea { width: 99%; height: 3em; }
+
+label { display: block; }
+label:first-of-type { margin-top: 1em; }
+label span { font-weight: bold; display: inline-block; width: 6.5em; }
+
+/* Tables */
+/* types and functions */
+:where(.params, .returns, .calls) table select { font-family: monospace; }
+
+/* names */
+.params table td:nth-child(2) input { width: 12em; font-family: monospace; }
+
+/* descriptions */
+:where(.params, .returns) table tr td:nth-last-child(2) input { width: 24em; }
+
+th { font-size: 0.8em; }
+
+/* hide header row if no other rows in table */
+table tr.header:last-child { visibility: hidden; }
+table tr.header:last-child::before, table:empty::before { content: "None"; visibility: visible; text-align: left; }
+
+/* Remove and Add Buttons */
+input[type="button"][value="X"], input[type="button"][value="+"], input[type="button"][value="▲"] , input[type="button"][value="▼"] {
+    margin: 0;
+    padding: 0;
+    border: 0;
+    background-color: transparent;
+    cursor: pointer;
+    border-radius: 50%;
+    width: 1.5em;
+    height: 1.5em;
+    font-weight: bold;
+}
+input[type="button"][value="X"] { color: red; border: 1px solid red; }
+input[type="button"][value="+"] { color: green; border: 1px solid green; }
+input[type="button"][value="▼"], input[type="button"][value="▲"] { color: blue; border: 1px solid blue; }
+
+/* Minimizing */
+.function.minimized {
+    height: 5em;
+    overflow: hidden;
+}
+
+/* Highlight Errors */
+h2 input:valid, h2 input:user-valid { border: 1px solid transparent; }
+:invalid { border: 1px solid rgb(127, 0, 0); }
+:user-invalid { border: 1px solid red; }
+
+/* Menu */
+#menu {
+    position: fixed;
+    top: 2.5em; left: 45em;
+    display: flex;
+    flex-direction: column;
+    padding: 0.5em;
+    border: 1px solid black;
+    border-radius: 1em;
+    background-color: #e0e0e0;
+    box-shadow: 0 0 0.5em black;
+}
+#menu input {
+    display: block;
+    margin: 0.5em;
+    padding: 0.5em;
+    background-color: #007bff;
+    color: white;
+    border: 3px outset #007bff;
+    border-radius: 0.5em;
+    cursor: pointer;
+}
+#menu input:active { border-style: inset; }
+
+</style>
+<script type="module">
+import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@11.4.1/+esm';
+
+let functionNames = [];
+let functionCallDropdowns = [];
+
+export function performBasicChecks() {
+    // Check that there are 8 functions in total
+    if (functionNames.length < 8) { alert("There must be at least 8 functions."); return; }
+
+    // Check that all functions have a valid name
+    for (let i = 0; i < functionNames.length; i++) {
+        let name = functionNames[i];
+        if (name === "" || !name.match(/^[a-zA-Z_][a-zA-Z0-9_]*$/)) {
+            alert(`Function ${i} has an invalid name.`);
+            return;
+        }
+    }
+
+    // Check that there are no duplicate function names
+    let uniqueNames = new Set(functionNames);
+    if (uniqueNames.size < functionNames.length) { alert("There are duplicate function names."); return; }
+
+    // Check that there is a main function
+    if (!functionNames.includes("main")) { alert("There must be a main function."); return; }
+
+    // Check that main has no parameters and no return values
+    let mainIndex = functionNames.indexOf("main");
+    let mainParams = JSON.parse(localStorage.getItem(`params${mainIndex}`));
+    if (mainParams.length > 0) { alert("Main must have no parameters."); return; }
+    let mainReturns = JSON.parse(localStorage.getItem(`returns${mainIndex}`));
+    if (mainReturns.length > 0) { alert("Main must have no return values."); return; }
+
+    // Check that all functions except main are called by at least one other function (and check that main is not called by any other function)
+    let callGraph = {};
+    for (let i = 0; i < functionNames.length; i++) {
+        let calls = JSON.parse(localStorage.getItem(`calls${i}`));
+        callGraph[functionNames[i]] = calls;
+    }
+    console.log(callGraph);
+    for (let i = 0; i < functionNames.length; i++) {
+        let name = functionNames[i];
+        let found = false;
+        for (let j = 0; j < functionNames.length; j++) {
+            if (i === j) { continue; }
+            if (callGraph[functionNames[j]].includes(name)) {
+                found = true;
+                break;
+            }
+        }
+
+        if (!found && name !== "main") {
+            alert(`${name} is not called by any other function.`);
+            return;
+        } else if (found && name === "main") {
+            alert("Main should not be called by another function.");
+            return;
+        }
+    }
+
+    // Check that there are no cycles in the function calls
+    let visited = new Set();
+    let stack = [];
+    let dfs = function(name) {
+        if (visited.has(name)) { return; }
+        visited.add(name);
+        stack.push(name);
+        for (let call of callGraph[name]) {
+            if (stack.includes(call)) {
+                alert(`There is a cycle in the function calls involving ${call}.`);
+                return;
+            }
+            dfs(call);
+        }
+        stack.pop();
+    }
+    dfs("main");
+
+    // Check that all functions except main have a description
+    for (let i = 0; i < functionNames.length; i++) {
+        if (i === mainIndex) { continue; }
+        let desc = localStorage.getItem(`desc${i}`);
+        if (desc.length === 0) {
+            alert(`${functionNames[i]} has no description.`);
+            return;
+        } else if (desc.length < 20) {
+            alert(`${functionNames[i]} description is too short - be more descriptive!`);
+            return;
+        }
+    }
+
+    // Check that all testable functions have no user input or output
+    for (let i = 0; i < functionNames.length; i++) {
+        let testable = localStorage.getItem(`testable${i}`) === "true";
+        let input = localStorage.getItem(`input${i}`);
+        let output = localStorage.getItem(`output${i}`);
+        if (testable && (input !== "none" || output !== "none")) {
+            alert(`We cannot test functions that have user input or output, but you marked otherwise for ${functionNames[i]}.`);
+            return;
+        }
+    }
+
+    // Check that a function that calls another function that has user input/output also has user input/output
+    for (let i = 0; i < functionNames.length; i++) {
+        let calls = JSON.parse(localStorage.getItem(`calls${i}`));
+        for (let call of calls) {
+            let callIndex = functionNames.indexOf(call);
+            if (!__checkIO(callIndex, i, "input")) { return; }
+            if (!__checkIO(callIndex, i, "output")) { return; }
+        }
+    }
+
+    // Check that main has only indirect user input/output
+    if (localStorage.getItem(`input${mainIndex}`) !== "indirect" || localStorage.getItem(`input${mainIndex}`) !== "indirect") {
+        alert("Main should only have indirect user input/output.");
+        return;
+    }
+
+    // Success!
+    alert("All basic checks passed!");
+}
+
+function __checkIO(callIndex, funcIndex, name) {
+    if (localStorage.getItem(`${name}${callIndex}`) !== "none" && localStorage.getItem(`${name}${funcIndex}`) === "none") {
+        let func = functionNames[funcIndex];
+        let call = functionNames[callIndex];
+        alert(`${func} calls ${call}, which has user ${name}, but ${func} does not have user ${name} (it should at least be marked as indirect).`);
+        return false;
+    }
+    return true;
+}
+
+export function createCallGraph() {
+    let element = document.getElementById("callgraph");
+    element.innerHTML = "";
+    let code = "%%{init: {'theme':'forest'}}%%\ncallgraph TD\n";
+    for (let i = 0; i < functionNames.length; i++) {
+        let name = functionNames[i];
+        let calls = JSON.parse(localStorage.getItem(`calls${i}`));
+        code += `    ${name}["${name}()"]\n`;
+        code += `    click ${name} href "#func${i}"\n`;
+        for (let call of calls) { code += `    ${name}-->${call}\n`; }
+    }
+    console.log(code);
+    __drawDiagram(code);
+}
+
+async function __drawDiagram(code) {
+    const { svg } = await mermaid.render("flowchart", code);
+    document.getElementById("callgraph").innerHTML = svg;
+}
+
+
+////////// Saving Data //////////
+
+function tempFunctionName(num) { return `function ${num} (name TBD)`; }
+
+function updateFunctionName(funcNum) {
+    let name = document.getElementById(`func${funcNum}`).value;
+    localStorage.setItem(`func${funcNum}`, name);
+    functionNames[funcNum] = name;
+
+    let value = name;
+    if (name === "") { name = tempFunctionName(funcNum); }
+    for (let dropdown of functionCallDropdowns) {
+        let options = dropdown.options;
+        if (funcNum < options.length) {
+            options[funcNum].text = name;
+            options[funcNum].value = value;
+        } else {
+            let option = document.createElement("option");
+            option.text = name;
+            option.value = value;
+            dropdown.appendChild(option);
+        }
+    }
+}
+
+function saveParams(funcNum) {
+    let params = [];
+    let table = document.getElementById(`params${funcNum}`);
+    for (let row of table.rows) {
+        if (row.className === "header") { continue; }
+        let type = row.cells[0].firstChild.value;
+        let name = row.cells[1].firstChild.value;
+        let desc = row.cells[2].firstChild.value;
+        params.push({"type": type, "name": name, "desc": desc});
+    }
+    localStorage.setItem(`params${funcNum}`, JSON.stringify(params));
+}
+
+function saveReturns(funcNum) {
+    let returns = [];
+    let table = document.getElementById(`returns${funcNum}`);
+    for (let row of table.rows) {
+        if (row.className === "header") { continue; }
+        let type = row.cells[0].firstChild.value;
+        let desc = row.cells[1].firstChild.value;
+        returns.push({"type": type, "desc": desc});
+    }
+    localStorage.setItem(`returns${funcNum}`, JSON.stringify(returns));
+}
+
+function saveFunctionCalls(funcNum) {
+    let calls = [];
+    let table = document.getElementById(`calls${funcNum}`);
+    for (let row of table.rows) {
+        if (row.className === "header") { continue; }
+        let call = row.cells[0].firstChild.value;
+        calls.push(call);
+    }
+    localStorage.setItem(`calls${funcNum}`, JSON.stringify(calls));
+}
+
+
+////////// Add Params, Returns, and Calls to a Function //////////
+
+function addCell(row, element) {
+    let newCell = document.createElement("td");
+    newCell.appendChild(element);
+    row.appendChild(newCell);
+}
+
+function addTypeCell(row, kind, callback) {
+    let type = document.createElement("select");
+    type.addEventListener("change", callback);
+    let types = ["int", "str", "float", "bool", "list of int", "list of str", "list of float", "list of bool"];
+    for (let t of types) {
+        let option = document.createElement("option");
+        option.value = t;
+        option.text = t;
+        type.appendChild(option);
+    }
+    addCell(row, type);
+}
+
+function addDescCell(row, kind, callback) {
+    let desc = document.createElement("input");
+    desc.addEventListener("input", callback);
+    desc.required = true;
+    addCell(row, desc);
+}
+
+function addRemoveButton(row, callback) {
+    let removeButton = document.createElement("input");
+    removeButton.type = "button";
+    removeButton.value = "X";
+    removeButton.addEventListener("click", () => {
+        row.parentElement.removeChild(row);
+        if (callback) { callback(); }
+        let dropdown = row.firstChild.firstChild;
+        if (dropdown instanceof HTMLSelectElement) {
+            functionCallDropdowns = functionCallDropdowns.filter(dd => dd !== dropdown);
+        }
+    });
+    addCell(row, removeButton);
+}
+
+function addParameter(funcNum) {
+    let table = document.getElementById(`params${funcNum}`);
+    let row = document.createElement("tr");
+    addTypeCell(row, "param", () => saveParams(funcNum));
+    let name = document.createElement("input");
+    name.addEventListener("input", () => saveParams(funcNum));
+    name.required = true;
+    name.pattern = "[a-zA-Z_][a-zA-Z0-9_]*";
+    addCell(row, name);
+    addDescCell(row, "param", () => saveParams(funcNum));
+    addRemoveButton(row, () => saveParams(funcNum));
+    table.appendChild(row);
+    saveParams(funcNum);
+}
+
+function addReturnValue(funcNum) {
+    let table = document.getElementById(`returns${funcNum}`);
+    let row = document.createElement("tr");
+    addTypeCell(row, "return", () => saveReturns(funcNum));
+    addDescCell(row, "return", () => saveReturns(funcNum));
+    addRemoveButton(row, () => saveReturns(funcNum));
+    table.appendChild(row);
+    saveReturns(funcNum);
+}
+
+function addFunctionCall(funcNum) {
+    let table = document.getElementById(`calls${funcNum}`);
+    let row = document.createElement("tr");
+    let call = document.createElement("select");
+    for (let [i, name] of functionNames.entries()) {
+        let option = document.createElement("option");
+        option.value = name;
+        option.text = name || tempFunctionName(i);
+        call.appendChild(option);
+    }
+    call.addEventListener("change", () => saveFunctionCalls(funcNum));
+    functionCallDropdowns.push(call);
+    addCell(row, call);
+    addRemoveButton(row, () => saveFunctionCalls(funcNum));
+    table.appendChild(row);
+    saveFunctionCalls(funcNum);
+}
+
+
+////////// Create Function Boxes //////////
+
+function createSectionHeader(title, createFunc) {
+    let h3 = document.createElement("h3");
+    h3.textContent = title + " ";
+    let button = document.createElement("input");
+    button.type = "button";
+    button.value = "+";
+    button.addEventListener("click", createFunc);
+    h3.appendChild(button);
+    return h3;
+}
+
+function createTable(id, headers) {
+    let table = document.createElement("table");
+    table.id = id;
+    let header = document.createElement("tr");
+    header.className = "header";
+    for (let h of headers) {
+        let th = document.createElement("th");
+        th.textContent = h;
+        header.appendChild(th);
+    }
+    table.appendChild(header);
+    return table;
+}
+
+function createFunctionParams(funcNum) {
+    let params = document.createElement("div");
+    params.className = "params";
+    params.appendChild(createSectionHeader("Parameter(s)", () => addParameter(funcNum)));
+    params.appendChild(createTable(`params${funcNum}`, ["Type", "Name", "Description"]));
+    return params;
+}
+
+function createFunctionReturns(funcNum) {
+    let returns = document.createElement("div");
+    returns.className = "returns";
+    returns.appendChild(createSectionHeader("Return Value(s)", () => addReturnValue(funcNum)));
+    returns.appendChild(createTable(`returns${funcNum}`, ["Type", "Description"]));
+    return returns;
+}
+
+function createFunctionCalls(funcNum) {
+    let calls = document.createElement("div");
+    calls.className = "calls";
+    calls.appendChild(createSectionHeader("Programmer-Defined Function Call(s)", () => addFunctionCall(funcNum)));
+    let callsTable = document.createElement("table");
+    callsTable.id = `calls${funcNum}`;
+    calls.appendChild(callsTable);
+    return calls;
+}
+
+function createDropdown(funcNum, name, options) {
+    let id = `${name}${funcNum}`;
+
+    let label = document.createElement("label");
+    label.htmlFor = id;
+
+    let span = document.createElement("span");
+    span.textContent = `User ${name}: `;
+    label.appendChild(span);
+
+    let dropdown = document.createElement("select");
+    dropdown.id = id;
+    for (let [name, value] of Object.entries(options)) {
+        let opt = document.createElement("option");
+        opt.text = name;
+        opt.value = value;
+        dropdown.appendChild(opt);
+    }
+    dropdown.addEventListener("change", () => localStorage.setItem(id, dropdown.value));
+    label.appendChild(dropdown);
+
+    return label;
+}
+
+function removeFunction(funcNum) {
+    let div = document.getElementById(`function${funcNum}`);
+    // TODO: need to remove the function name from the dropdowns, adjust all ids
+    div.parentElement.removeChild(div);
+    functionNames = functionNames.filter((_, i) => i !== funcNum);
+    localStorage.setItem("numFunctions", functionNames.length);
+}
+
+function minimizeFunction(funcNum) {
+    let div = document.getElementById(`function${funcNum}`);
+    let minimizeButton = div.querySelector(".minimize");
+    div.classList.toggle("minimized"); 
+    minimizeButton.value = div.classList.contains("minimized") ? "▲" : "▼";
+}
+
+export function addFunction() {
+    let funcNum = functionNames.length;
+    let div = document.createElement("div");
+    div.id = `function${funcNum}`;
+    div.className = "function";
+    document.getElementById("functions").appendChild(div);
+
+    // Function Name
+    let h2 = document.createElement("h2");
+    let name = document.createElement("input");
+    name.id = `func${funcNum}`;
+    name.value = localStorage.getItem(`func${funcNum}`) || "";
+    name.className = "func_name";
+    name.placeholder = "Function Name";
+    name.required = true;
+    name.pattern = "[a-zA-Z_][a-zA-Z0-9_]*(\\(\\))?";
+    name.addEventListener("input", () => updateFunctionName(funcNum));
+    h2.appendChild(name);
+    div.appendChild(h2);
+
+    // Remove Button
+    let removeButton = document.createElement("input");
+    removeButton.type = "button";
+    removeButton.value = "X";
+    removeButton.addEventListener("click", () => {
+        if (confirm("Are you sure you want to remove this function?")) {
+            removeFunction(funcNum);
+        }
+    });
+    h2.appendChild(removeButton);
+
+    // Minimize Button
+    let minimizeButton = document.createElement("input");
+    minimizeButton.type = "button";
+    minimizeButton.value = "▼";
+    minimizeButton.className = "minimize";
+    minimizeButton.addEventListener("click", () => minimizeFunction(funcNum));
+    h2.appendChild(minimizeButton);
+
+    // Function Description
+    let desc = document.createElement("textarea");
+    desc.id = `desc${funcNum}`;
+    desc.required = true;
+    desc.placeholder = "Description";
+    desc.addEventListener("input", () => localStorage.setItem(`desc${funcNum}`, desc.value));
+    div.appendChild(desc);
+
+    // Create the parameter, return, and call sections
+    div.appendChild(createFunctionParams(funcNum));
+    div.appendChild(createFunctionReturns(funcNum));
+    div.appendChild(createFunctionCalls(funcNum));
+
+    // Create user input/output section
+    div.appendChild(createDropdown(funcNum, "input",
+        {"none": "none", "indirect": "indirect", "direct, no validation": "direct", "direct, requires validation": "validation"}));
+    div.appendChild(createDropdown(funcNum, "output", {"none": "none", "indirect": "indirect", "direct": "direct"}));
+
+    // Create the testable checkbox
+    let testable = document.createElement("label");
+    let span = document.createElement("span");
+    span.textContent = "Testable: ";
+    testable.appendChild(span);
+    let checkbox = document.createElement("input");
+    checkbox.type = "checkbox";
+    checkbox.id = `testable${funcNum}`;
+    checkbox.addEventListener("change", () => localStorage.setItem(`testable${funcNum}`, checkbox.checked));
+    testable.appendChild(checkbox);
+    div.appendChild(testable);
+
+    // Update the function name in the dropdowns
+    functionNames.push(name.value);
+    updateFunctionName(funcNum);
+    localStorage.setItem("numFunctions", functionNames.length);
+
+    return funcNum;
+}
+
+
+////////// Loading Data //////////
+
+/**
+ * Load the function data from the saved information in the local storage.
+ */
+function loadFunctionFromLocalStorage(funcNum) {
+    let name = localStorage.getItem(`func${funcNum}`) || "";
+    let desc = localStorage.getItem(`desc${funcNum}`) || "";
+    let params = JSON.parse(localStorage.getItem(`params${funcNum}`) || "[]");
+    let returns = JSON.parse(localStorage.getItem(`returns${funcNum}`) || "[]");
+    let calls = JSON.parse(localStorage.getItem(`calls${funcNum}`) || "[]");
+    let input = localStorage.getItem(`input${funcNum}`) || "none";
+    let output = localStorage.getItem(`output${funcNum}`) || "none";
+    let testable = localStorage.getItem(`testable${funcNum}`) === "true";
+    loadFunction(name, desc, params, returns, calls, input, output, testable);
+}
+
+/**
+ * Loads a table portion of the function planner.
+ */
+function loadTable(tableName, data, keys, addFunc) {
+    let table = document.getElementById(tableName);
+    for (let item of data) {
+        addFunc();
+        let row = table.rows[table.rows.length - 1];
+        if (keys === null) {
+            row.cells[0].firstChild.value = item;
+        } else {
+            for (let i = 0; i < keys.length; i++) {
+                row.cells[i].firstChild.value = item[keys[i]];
+            }
+        }
+    }
+    localStorage.setItem(tableName, JSON.stringify(data));
+}
+
+/**
+ * Load the given function data into the function planner.
+ * Adds a new function and sets all of its data.
+ */
+function loadFunction(name, desc, params, returns, calls, input, output, testable) {
+    let funcNum = addFunction();
+    document.getElementById(`func${funcNum}`).value = name;
+    document.getElementById(`desc${funcNum}`).value = desc;
+    localStorage.setItem(`desc${funcNum}`, desc);
+
+    loadTable(`params${funcNum}`, params, ["type", "name", "desc"], () => addParameter(funcNum));
+    loadTable(`returns${funcNum}`, returns, ["type", "desc"], () => addReturnValue(funcNum));
+    loadTable(`calls${funcNum}`, calls, null, () => addFunctionCall(funcNum));
+
+    document.getElementById(`input${funcNum}`).value = input;
+    localStorage.setItem(`input${funcNum}`, input);
+
+    document.getElementById(`output${funcNum}`).value = output;
+    localStorage.setItem(`output${funcNum}`, output);
+
+    document.getElementById(`testable${funcNum}`).checked = testable;
+    localStorage.setItem(`testable${funcNum}`, testable);
+
+    updateFunctionName(funcNum);
+    minimizeFunction(funcNum);
+}
+
+/**
+ * Load the function planner data from local storage.
+ */
+document.addEventListener("DOMContentLoaded", () => {
+    let numFunctions = localStorage.getItem("numFunctions") || 0;
+    if (numFunctions === 0) { loadDefaults(false); }
+    for (let i = 0; i < numFunctions; i++) { loadFunctionFromLocalStorage(i); }
+});
+
+
+////////// Exporting Data //////////
+
+/**
+ * Export the list of items to a string. Each item is formatted by the formatItem function.
+ */
+function exportList(name, list, formatItem) {
+    let text = `${name}: `;
+    if (list === null || list.length === 0) {
+        text += "none";
+    } else if (list.length === 1) {
+        text += formatItem(list[0]);
+    } else {
+        for (let item of list) { text += `\n    ${formatItem(item)}`; }
+    }
+    text += "\n";
+    return text;
+}
+
+/**
+ * Copy the given text to the clipboard.
+ */
+function copyToClipboard(text) {
+    let textArea = document.createElement("textarea");
+    textArea.value = text;
+    document.body.appendChild(textArea);
+    textArea.select();
+    document.execCommand("copy");
+    document.body.removeChild(textArea);
+}
+
+/**
+ * Export the function planner data for pasting into the functions.txt file of the lab.
+ */
+ export function exportToText() {
+    let text = "Teammate Names: \n\nFunctions\n=========\n\n";
+    for (let [i, name] of functionNames.entries()) {
+        name = name || tempFunctionName(i);
+        text += `${name}\n`;
+        for (let j = 0; j < name.length; j++) { text += "-"; }
+        let desc = localStorage.getItem(`desc${i}`);
+        if (desc) { text += `\n${desc}\n\n`; } else { text += "\n"; }
+        let params = JSON.parse(localStorage.getItem(`params${i}`));
+        text += exportList("Parameters", params, p => `${p.type} - ${p.name} - ${p.desc}`);
+        let returns = JSON.parse(localStorage.getItem(`returns${i}`));
+        text += exportList("Returns", returns, ret => `${ret.type} - ${ret.desc}`);
+        let calls = JSON.parse(localStorage.getItem(`calls${i}`));
+        text += "\n";
+        text += exportList("Calls", calls, call => call);
+        text += "\n";
+        text += `User Input: ${localStorage.getItem(`input${i}`) || "none"}\n`;
+        text += `User Output: ${localStorage.getItem(`output${i}`) || "none"}\n\n`;
+        text += `Testable: ${localStorage.getItem(`testable${i}`) === "true" ? "yes" : "no"}\n\n`;
+    }
+    copyToClipboard(text);
+    alert("Text copied to clipboard. Paste it into functions.txt.");
+}
+
+
+////////// Clearing/Reseting Data //////////
+
+export function clearAllData() {
+    if (confirm("Are you sure you want to clear all data?")) {
+        localStorage.clear();
+        location.reload();
+    }
+}
+
+export function loadDefaults(confirm = true) {
+    if (confirm && !window.confirm("Are you sure you want to load the default functions? This will clear all current data.")) { return; }
+    localStorage.clear();
+    document.getElementById("functions").innerHTML = "";
+    functionNames = [];
+    functionCallDropdowns = [];
+    loadFunction("read_list_of_students", "Read all of the names of students from the given file into a list.", [], [{"type": "list of str", "desc": "the student names from the file"}], [], "none", "none", false);
+    loadFunction("get_new_grade", "Get a new grade for the given student from the user. It is required to be an int between 0 and 100. If the user enters an invalid grade, they will be prompted to enter a new one.",
+                 [{"name": "student_name", "type": "str", "desc": "the student to get a grade for"}], [{"type": "int", "desc": "the new grade for the student"}], [], "validation", "direct", false);
+    loadFunction("median", "Calculate the median of the given list of grades.",
+                 [{"name": "list_of_grades", "type": "list of int", "desc": "the grades to calculate the median of"}], [{"type": "float", "desc": "the median of the grades"}], [], "none", "none", true);
+}
+
+
+window.addFunction = addFunction;
+window.performBasicChecks = performBasicChecks;
+window.exportToText = exportToText;
+window.loadDefaults = loadDefaults;
+window.clearAllData = clearAllData;
+window.createCallGraph = createCallGraph;
+
+</script>
+</head>
+<body>
+    <h1>Lab 5 Function Planner</h1>
+    <div id="callgraph"></div>
+    <div id="functions"></div>
+    <div id="menu">
+        <input type="button" value="➕ Add Function" onclick="addFunction(); window.scrollTo(0, document.body.scrollHeight);">
+        <input type="button" value="✅︎ Perform Basic Checks" onclick="performBasicChecks()">
+        <input type="button" value="📝 Export to Text" onclick="exportToText();">
+        <input type="button" value="🔄 Load Defaults" onclick="loadDefaults();">
+        <!--<input type="button" value="Clear All Data" onclick="clearAllData();">-->
+        <input type="button" value="🔀 Create Call Graph" onclick="createCallGraph();"><!-- 📊 -->
+    </div>
+</body>
+</html>
