@@ -262,7 +262,7 @@ export function createCallGraph() {
         let name = functionNames[i];
         let calls = JSON.parse(localStorage.getItem(`calls${i}`));
         code += `    ${name}["${name}()"]\n`;
-        code += `    click ${name} href "#func${i}"\n`;
+        code += `    click ${name} href "#function${i}"\n`;
         for (let call of calls) { code += `    ${name}-->${call}\n`; }
     }
     //console.log(code);
