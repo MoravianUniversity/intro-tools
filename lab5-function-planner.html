@@ -111,7 +111,7 @@ let functionCallDropdowns = [];
 
 export function performBasicChecks() {
     // Check that there are 8 functions in total
-    //if (functionNames.length < 8) { alert("There must be at least 8 functions."); return; }
+    if (functionNames.length < 8) { alert("There must be at least 8 functions."); return; }
 
     // Check that all functions have a valid name
     for (let i = 0; i < functionNames.length; i++) {
