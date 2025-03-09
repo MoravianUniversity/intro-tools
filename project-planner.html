@@ -1,18 +1,18 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>Function Planner</title>
+    <title>Project Function Planner</title>
     <link rel="stylesheet" type="text/css" href="function-planner.css">
     <script src="https://unpkg.com/sweetalert/dist/sweetalert.min.js"></script>
     <script src="https://unpkg.com/@popperjs/core@2"></script>
     <script src="https://unpkg.com/tippy.js@6"></script>
     <script type="module">
     import init from "./function-planner.js";
-    document.addEventListener("DOMContentLoaded", () => { init(document.getElementById("planner")); });
+    document.addEventListener("DOMContentLoaded", () => { init(document.getElementById("planner"), "project", null, null, 10, 2); });
     </script>
 </head>
 <body>
-    <h1>Function Planner</h1>
+    <h1>Project Function Planner</h1>
     <div id="planner"></div>
 </body>
 </html>
