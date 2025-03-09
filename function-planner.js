@@ -5,7 +5,7 @@
  *  - more flexible type selection (click, dialog that designs the type)
  *  - better display of the first line of the function (make it look like Python)
  *  - generate testing code
- *  - have the call graph show params and returns and color code based on inputs, outputs, and testability
+ *  - more init options for what should be tested or in the menu
  */
 
 import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@11.4.1/+esm';
