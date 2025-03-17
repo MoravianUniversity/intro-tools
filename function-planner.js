@@ -932,8 +932,10 @@ export function performBasicChecks(min_funcs=0, min_testable=0) {
 }
 
 function __checkIO(func, called, kind) {
-    if (called[kind] !== "none" && func[kind] === "none") {
-        checkError(`${func.name}() calls ${call.name}(), which has user ${kind}, but ${func.name}() does not have user ${kind}() (it should at least be marked as indirect).`);
+    let called_kind = called[kind] || "none";
+    let func_kind = func[kind] || "none";
+    if (called_kind !== "none" && func_kind === "none") {
+        checkError(`${func.name}() calls ${called.name}(), which has user ${kind}, but ${func.name}() does not have user ${kind} (it should at least be marked as indirect).`);
         return false;
     }
     return true;
@@ -972,9 +974,10 @@ export function createCallGraph() {
         // Create the node for the function
         let name = func.name || `function${i}`;
         let nodeName = name.replace(/[^a-zA-Z0-9_]/g, "");
+        let displayName = name.replace(/"'\[\]\\/g, "");
         while (nodeNames.has(nodeName)) { nodeName += "_"; }
         nodeNames.add(nodeName);
-        code += `    ${nodeName}["${name}()"];\n`;
+        code += `    ${nodeName}["${displayName}()"];\n`;
 
         // Set the style for the node
         let style = PLAIN_STYLE;
