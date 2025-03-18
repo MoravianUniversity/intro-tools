@@ -967,44 +967,49 @@ export function createCallGraph() {
     if (model.length === 0 || loading) { callgraph_elem.innerHTML = ""; return; }
     //callgraph_elem.innerHTML = "";
 
-    let funcNameInputs = Array.from(functions_elem.querySelectorAll(".function input.func_name"));
+    try {
+        let funcNameInputs = Array.from(functions_elem.querySelectorAll(".function input.func_name"));
 
-    let code = "%%{init: {'theme':'neutral'}}%%\nflowchart TD\n";
-    let links = "";
-    let nodeNames = new Set();
-    for (let [i, func] of model.entries()) {
-        // Create the node for the function
-        let name = func.name || `function${i}`;
-        let nodeName = name.replace(/[^a-zA-Z0-9_]/g, "");
-        let displayName = name.replace(/"'\[\]\\/g, "");
-        while (nodeNames.has(nodeName)) { nodeName += "_"; }
-        nodeNames.add(nodeName);
-        code += `    ${nodeName}["${displayName}()"];\n`;
+        let code = "%%{init: {'theme':'neutral'}}%%\nflowchart TD\n";
+        let links = "";
+        let nodeNames = new Set();
+        for (let [i, func] of model.entries()) {
+            // Create the node for the function
+            let name = func.name || `function${i}`;
+            let nodeName = name.replace(/[^a-zA-Z0-9_]/g, "");
+            let displayName = name.replace(/"'\[\]\\/g, "");
+            while (nodeNames.has(nodeName)) { nodeName += "_"; }
+            nodeNames.add(nodeName);
+            code += `    ${nodeName}["${displayName}()"];\n`;
 
-        // Set the style for the node
-        let style = PLAIN_STYLE;
-        if (func.testable === true) { style = TESTABLE_STYLE; }
-        else if (func.input === "validation") { style = INPUT_VALIDATION_STYLE; }
-        else if (func.input === "direct") { style = INPUT_NO_VALID_STYLE; }
-        else if (func.output === "direct") { style = OUTPUT_ONLY_STYLE; }
-        if (style) { code += `    style ${nodeName} ${style}\n`; }
+            // Set the style for the node
+            let style = PLAIN_STYLE;
+            if (func.testable === true) { style = TESTABLE_STYLE; }
+            else if (func.input === "validation") { style = INPUT_VALIDATION_STYLE; }
+            else if (func.input === "direct") { style = INPUT_NO_VALID_STYLE; }
+            else if (func.output === "direct") { style = OUTPUT_ONLY_STYLE; }
+            if (style) { code += `    style ${nodeName} ${style}\n`; }
 
-        // Create the links to the function calls
-        let calls = func.calls || [];
-        for (let call of calls) { links += `    ${nodeName} --> ${call};\n`; }
+            // Create the links to the function calls
+            let calls = func.calls || [];
+            for (let call of calls) { links += `    ${nodeName} --> ${call};\n`; }
 
-        // Create the link to the function definition
-        let funcElem = funcNameInputs[i].parentElement.parentElement;
-        funcElem.id = nodeName;
-        let tooltip = pythonDefLine(displayName, func.params, func.returns);
-        tooltip = tooltip.replace(/^def /, "").replace(/:$/, "").replace(/"/, "'");
-        code += `    click ${nodeName} href "#${nodeName}" "${tooltip}"\n`;
+            // Create the link to the function definition
+            let funcElem = funcNameInputs[i].parentElement.parentElement;
+            funcElem.id = nodeName;
+            let tooltip = pythonDefLine(displayName, func.params, func.returns);
+            tooltip = tooltip.replace(/^def /, "").replace(/:$/, "").replace(/"/, "'");
+            code += `    click ${nodeName} href "#${nodeName}" "${tooltip}"\n`;
+        }
+        code += links;
+        if (code === lastDiagram) { return; }
+        console.log(code);
+        lastDiagram = code;
+        __drawDiagram(code);
+    } catch (e) {
+        console.error(e);
+        callgraph_elem.innerHTML = "";
     }
-    code += links;
-    if (code === lastDiagram) { return; }
-    console.log(code);
-    lastDiagram = code;
-    __drawDiagram(code);
 }
 
 async function __drawDiagram(code) {
