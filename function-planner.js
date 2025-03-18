@@ -6,6 +6,7 @@
  *  - better display of the first line of the function (make it look like Python)
  *  - generate testing code
  *  - more init options for what should be tested or in the menu
+ *  - allow a plan to lock specific parts of a function (like it name) [if any part locked, no removal allowed]
  */
 
 import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@11.4.1/+esm';
@@ -333,7 +334,7 @@ function loadTable(table, func, name, keys, addFunc, locked=false) {
     }
 }
 
-function createTable(func, name, headers, keys, addFunc, locked=false) {
+function createTable(func, name, headers, keys, addFunc, saveFunc, locked=false) {
     let table = document.createElement("table");
     let header = document.createElement("tr");
     header.className = "header";
@@ -344,16 +345,17 @@ function createTable(func, name, headers, keys, addFunc, locked=false) {
     }
     table.appendChild(header);
     loadTable(table, func, name, keys, addFunc, locked);
+    saveFunc(func, table);
     return table;
 }
 
 function createFunctionParams(func, locked=false) {
-    let table = createTable(func, "params", ["Type", "Name", "Description"], ["type", "name", "desc"], addParameter, locked);
+    let table = createTable(func, "params", ["Type", "Name", "Description"], ["type", "name", "desc"], addParameter, saveParams, locked);
     return createTableSection("params", "Parameter(s)", table, () => addParameter(func, table), locked);
 }
 
 function createFunctionReturns(func, locked=false) {
-    let table = createTable(func, "returns", ["Type", "Description"], ["type", "desc"], addReturnValue, locked);
+    let table = createTable(func, "returns", ["Type", "Description"], ["type", "desc"], addReturnValue, saveReturns, locked);
     return createTableSection("returns", "Return Value(s)", table, () => addReturnValue(func, table), locked);
 }
 
@@ -741,8 +743,8 @@ export function loadDefaultPlan(confirm = true) {
     } else {
         clearPlan(false);
         model = JSON.parse(JSON.stringify(default_model));
-        saveModel(true);
         loadModel();
+        saveModel(true);
     }
 }
 
@@ -767,9 +769,9 @@ export function loadJSON() {
         if (value === null) { return; }
         try {
             model = JSON.parse(value);
-            saveModel(true);
             functions_elem.innerHTML = "";
             loadModel();
+            saveModel(true);
         } catch (e) {
             swal("Invalid JSON", "The JSON data is invalid.", "error");
         }
