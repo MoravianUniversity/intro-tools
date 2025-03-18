@@ -996,7 +996,9 @@ export function createCallGraph() {
         // Create the link to the function definition
         let funcElem = funcNameInputs[i].parentElement.parentElement;
         funcElem.id = nodeName;
-        code += `    click ${nodeName} href "#${nodeName}"\n`;
+        let tooltip = pythonDefLine(displayName, func.params, func.returns);
+        tooltip = tooltip.replace(/^def /, "").replace(/:$/, "").replace(/"/, "'");
+        code += `    click ${nodeName} href "#${nodeName}" "${tooltip}"\n`;
     }
     code += links;
     if (code === lastDiagram) { return; }
