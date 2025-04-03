@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Number Guess Function Planner</title>
+    <link rel="stylesheet" type="text/css" href="function-planner.css">
+    <script src="https://unpkg.com/sweetalert/dist/sweetalert.min.js"></script>
+    <script src="https://unpkg.com/@popperjs/core@2"></script>
+    <script src="https://unpkg.com/tippy.js@6"></script>
+    <script type="module">
+    import init from "./function-planner.js";
+
+    let default_model = [
+    {
+        "name": "main",
+        "desc": "",
+        "params": [],
+        "returns": [],
+        "calls": ["play_one_game"],
+        "input": "direct",
+        "output": "indirect",
+        "testable": false,
+        "code": "user_name = input(\"What's your name? \")\nplay_one_game(user_name)",
+        "locked": true,
+        "minimized": true
+    },
+    {
+        "name": "get_guess_outcome",
+        "desc": "Checks a guessed number against an actual value, returning a value based on if it is less than, more than, or equal to the actual value. It also looks for values that are 'not even close'.",
+        "params": [
+            {"name": "guessed", "type": "int", "desc": "the guessed number"},
+            {"name": "actual", "type": "int", "desc": "the actual number to be guessed (i.e. the answer)"}
+        ],
+        "returns": [{"type": "str", "desc": "the message to show"}],
+        "calls": [],
+        "input": "none",
+        "output": "none",
+        "testable": false,
+        "code": "diff = guessed - actual\nif diff < 0:\n    return 'Your guess was too low.'\nelif diff < -20:\n    return 'Your guess was too low (not even close)!'\nelif diff > 0:\n    return 'Your guess was too high.'\nelse:\n    return 'Your guess was too high (not even close)!'",
+        "locked": true,
+        "minimized": true
+    },
+    {
+        "name": "play_one_game",
+        "desc": "Plays a single number-guessing game with the user (whose name is given as an argument). To play the game, the computer thinks of a number, and then repeatedly:\n    * gets a guess from the user\n    * checks the guess against the computer's number\n    * prints the outcome string\n    * updates the allowed range for guesses\nThat stops once the user guesses the correct number. Then, the user is informed how many guesses it took them.",
+        "params": [{"name": "user_name", "type": "str", "desc": "the name of the user/game player"}],
+        "returns": [{"type": "int", "desc": "the number of guesses it took the user to guess the number"}],
+        "calls": ["thinking_of_a_number", "play_one_round", "display_result"],
+        "input": "indirect",
+        "output": "indirect",
+        "testable": false,
+        "code": "num_guesses = 1\n\n# The initial range of possible guesses\n# The play_one_round() function will update this range as the game progresses\n# This works since lists are mutable\nguess_range = [1, 100]\n\n# Have the computer think of a number\nnumber = thinking_of_a_number(user_name)\n\n# Repeat until correctly guessed\nwhile play_one_round(user_name, number, guess_range):\n    num_guesses += 1\n\n# Display the results\ndisplay_result(user_name, num_guesses)\n\nreturn num_guesses",
+        "locked": true,
+        "minimized": true
+    },
+    {
+        "name": "thinking_of_a_number",
+        "desc": "TODO",
+    },
+    {
+        "name": "play_one_round",
+        "desc": "TODO",
+    },
+    {
+        "name": "display_result",
+        "desc": "TODO",
+    }];
+    let allowed_types = ["int", "str", "float", "bool", "list of int", "list of str", "list of float", "list of bool"];
+    document.addEventListener("DOMContentLoaded", () => {
+        init(document.getElementById("planner"), "number-guess", default_model, allowed_types, 7, 3);
+    });
+    </script>
+</head>
+<body>
+    <h1>Number Guess Function Planner</h1>
+    <div id="planner"></div>
+</body>
+</html>
