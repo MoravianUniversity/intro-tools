@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Bigrams Planner</title>
+    <link rel="stylesheet" type="text/css" href="function-planner.css">
+    <script src="https://unpkg.com/sweetalert/dist/sweetalert.min.js"></script>
+    <script src="https://unpkg.com/@popperjs/core@2"></script>
+    <script src="https://unpkg.com/tippy.js@6"></script>
+    <script type="module">
+    import init from "./function-planner.js";
+    document.addEventListener("DOMContentLoaded", () => { init(
+        document.getElementById("planner"), "bigrams", null, [
+            "int", "str", "float", "bool",
+            "list of int", "list of str", "list of float", "list of bool",
+            "tuple of int", "tuple of str", "tuple of float", "tuple of bool",
+            "dict",
+        ], 5, 4
+    ); });
+    </script>
+</head>
+<body>
+    <h1>Bigrams Planner</h1>
+    <div id="planner"></div>
+</body>
+</html>
