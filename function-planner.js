@@ -7,6 +7,10 @@
  *  - generate testing code
  *  - more init options for what should be tested or in the menu
  *  - allow a plan to lock specific parts of a function (like it name) [if any part locked, no removal allowed]
+ * 
+ * Big idea:
+ *  - make the diagram all that there is, clicking on a function brings up its information to be typed in
+ *  - click and drag to create connections between functions
  */
 
 import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@11.4.1/+esm';
@@ -75,7 +79,7 @@ function createMenu(minFunctions=0, minTestable=0) {
     menu.appendChild(createMenuButton("✅︎ Perform Basic Checks", () => performBasicChecks(minFunctions, minTestable)));
     //menu.appendChild(createMenuButton("🔀 Create Call Graph", createCallGraph));
     menu.appendChild(createMenuButton("↩️ Undo", undo));
-    menu.appendChild(createMenuButton("📝 Export to Text", exportToText, "Export to a human-readable text format for submission"));
+    //menu.appendChild(createMenuButton("📝 Export to Text", exportToText, "Export to a human-readable text format for submission"));
     menu.appendChild(createMenuButton("🐍 Create Python template", exportToPython, "Create a Python template of the plan"));
     menu.appendChild(createMenuButton("💾 Save JSON", saveJSON, "Save to a format which can be reloaded by this tool"));
     menu.appendChild(createMenuButton("📤 Load JSON", loadJSON, "Load from a previously saved JSON"));
