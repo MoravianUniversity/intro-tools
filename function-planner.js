@@ -410,10 +410,11 @@ function removeFunction(func, funcElem) {
     }
     for (let elem of functions_elem.querySelectorAll(".calls select")) {
         if (elem.selectedIndex === index) { getParentByTag(elem, "TR").remove(); }
+        else { elem.remove(index); }
     }
 
     // remove the function name from all remaining dropdowns
-    updateFuncNames();
+    // updateFuncNames();
 
     // save the model
     saveModel(true);
