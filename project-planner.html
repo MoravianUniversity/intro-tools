@@ -8,7 +8,11 @@
     <script src="https://unpkg.com/tippy.js@6"></script>
     <script type="module">
     import init from "./function-planner.js";
-    document.addEventListener("DOMContentLoaded", () => { init(document.getElementById("planner"), "project", null, null, 10, 2); });
+    document.addEventListener("DOMContentLoaded", () => { init(document.getElementById("planner"), "project", null, [
+            "int", "str", "float", "bool", "list", "tuple", "dict",
+            "list of int", "list of str", "list of float", "list of bool",
+            "tuple of int", "tuple of str", "tuple of float", "tuple of bool",
+        ], 10, 2); });
     </script>
 </head>
 <body>
