@@ -4,7 +4,6 @@
  * Future ideas:
  *  - more flexible type selection (click, dialog that designs the type)
  *  - better display of the first line of the function (make it look like Python)
- *  - generate testing code
  *  - more init options for what should be tested or in the menu
  */
 
@@ -811,6 +810,7 @@ function makeButtons(diagram) {
     });
 
     addButton(holder, 'python.svg', '', 'Create Python Template', () => { exportToPython(diagram); });
+    addButton(holder, 'unit-tests.svg', '', 'Generate Python Unit Tests', () => { exportPythonTests(diagram); });
     addButton(holder, 'save.svg', 'no-outline', 'Save as JSON', () => { saveJSON(diagram); });
     addButton(holder, 'load.svg', 'no-outline', 'Load from JSON', () => { loadJSON(diagram); });
 }
@@ -1334,7 +1334,7 @@ function pythonDocstring(desc, params, returns) {
     docstring += `    """\n`;
     return docstring;
 }
-function exportToPython(diagram, withTypes=true) {
+function generatePythonTemplate(diagram, withTypes=true) {
     let text = '"""\nTODO: program header\n\nBy:\n"""\n\n';
     let mainFunc = null;
     // TODO: sort?
@@ -1378,7 +1378,10 @@ function exportToPython(diagram, withTypes=true) {
     if (mainFunc) {
         text += mainFunc + '\n\n\nif __name__ == "__main__":\n    main()\n';
     }
-
+    return text;
+}
+function exportToPython(diagram, withTypes=true) {
+    const text = generatePythonTemplate(diagram, withTypes);
     copyToClipboard(text);
     Swal.fire({
         theme: diagram.themeManager.currentTheme,
@@ -1389,6 +1392,30 @@ function exportToPython(diagram, withTypes=true) {
             "<a href=\"data:text/plain;charset=utf-8," + encodeURIComponent(text) + "\" download=\"" + diagram.planId + ".py\">Click here to download it.</a>",
         showCloseButton: true,
     });
+}
+function generatePythonTests(diagram) {
+    let text = '"""\nTODO: test header\n\nBy:\n"""\n\nimport pytest\n\nimport ' + diagram.planId + '\n\n';
+    for (const func of diagram.model.nodeDataArray) {
+        if (func.testable) {
+            text += `def test_${func.name}():\n    # TODO: write tests\n    pass\n\n`;
+        }
+    }
+    text += `if __name__ == '__main__':\n    pytest.main(["--no-header", "--tb=short"])\n`;
+    return text;
+}
+function exportPythonTests(diagram) {
+    const text = generatePythonTests(diagram);
+    copyToClipboard(text);
+    Swal.fire({
+        theme: diagram.themeManager.currentTheme,
+        imageUrl: 'unit-tests.svg',
+        imageWidth: "6em",
+        title: "Python Unit Tests Copied",
+        html: "Python unit tests copied to clipboard.<br>Paste it into a Python file that ends with <code>_test.py</code>.<br>" +
+            "<a href=\"data:text/plain;charset=utf-8," + encodeURIComponent(text) + "\" download=\"" + diagram.planId + "_test.py\">Click here to download it.</a>",
+        showCloseButton: true,
+    });
+
 }
 
 function confirmDialog(title, text, confirmFunc, theme='auto') {
