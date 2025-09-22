@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>Lab 5 Function Planner</title>
+    <title>Lab 6: Grades Function Planner</title>
     <style>
         body {
             margin: 0;
@@ -23,13 +23,13 @@
     <link rel="stylesheet" href="https://unpkg.com/sweetalert2@11.22.0/dist/sweetalert2.min.css">
     <script type="module">
     import init from "./function-planner.js";
-    let default_model = {
+    const initialModel = {
         functions: [
             {
                 key: 1,
                 name: "main",
                 io: "indirect",
-                testable: false,
+                readOnly: ['name', 'desc', 'params', 'returns'],
             },
             {
                 key: 2,
@@ -51,7 +51,7 @@
                 io: "validation",
                 testable: false,
                 code: "while True:\n    try:\n        grade = int(input(f\"Enter the grade for {student_name}: \"))\n        if 0 <= grade <= 100:\n            return grade\n        else:\n            print(\"Grade must be between 0 and 100.\")\n    except ValueError:\n        print(\"Grade must be a number.\")",
-                readOnly: true,
+                readOnly: ['name', 'desc', 'params', 'returns', 'io', 'testable'],
             },
             {
                 key: 4,
@@ -61,14 +61,13 @@
                 returns: [{"type": "float", "desc": "the median of the grades"}],
                 io: "none",
                 testable: true,
-                readOnly: true,
+                readOnly: ['name', 'desc', 'params', 'returns', 'io', 'testable'],
             }
         ],
-        calls: []
+        calls: [{from: 1, to: 2}]
     };
-    let allowed_types = ["int", "str", "float", "list"];
     document.addEventListener("DOMContentLoaded", () => {
-        init("planner", "Lab 5 Function Planner", "lab5", default_model, allowed_types, 8, 3);
+        init("planner", null, "grades", initialModel, ["int", "str", "float", "list"], 8, 3);
     });
     </script>
 </head>
