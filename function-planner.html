@@ -23,8 +23,22 @@
     <link rel="stylesheet" href="https://unpkg.com/sweetalert2@11.22.0/dist/sweetalert2.min.css">
     <script type="module">
     import init from "./function-planner.js";
+    const planId = "default";
+    const initialModel = {
+        functions: [
+            { key: 1, name: 'alpha', params: [{'name': 'a', 'type': 'int', 'desc': "The first parameter"}], io: "validation" },
+            { key: 2, name: '', returns: [{'type': 'str', 'desc': 'The return value'}], io: "input" },
+            { key: 3, name: 'main', readOnly: ["params", "returns"] },
+            { key: 4, name: 'delta', io: "output" },
+        ],
+        calls: [
+            { from: 1, to: 2 },
+            { from: 3, to: 4 },
+            { from: 3, to: 1 },
+        ]
+    };
     window.addEventListener('DOMContentLoaded', () => {
-        init('planner');
+        init('planner', null, planId, initialModel, null, 2, 1);
     });
     </script>
 </head>

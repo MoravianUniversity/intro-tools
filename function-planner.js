@@ -2,15 +2,17 @@
  * This file contains the code for the function planner tool.
  * 
  * Future ideas:
- *  - more flexible type selection (click, dialog that designs the type)
- *  - better display of the first line of the function (make it look like Python)
+ *  - better display of the first line of the function (make it look like Python, text boxes that auto-resize)
  *  - more init options for what should be tested or in the menu
+ *  - a few less parentheses in the type editor string generation
  */
 
-// TODO: proper imports?
+// TODO: proper imports? maybe an import map? https://developer.mozilla.org/en-US/docs/Web/HTML/Reference/Elements/script/type/importmap
 //import * as go from 'gojs';
 //import Sortable from 'sortablejs';
 //import Swal from 'sweetalert2'
+
+import TypeEditor from './type-editor.js';
 
 const IMMUTABLE_TYPES = ['int', 'float', 'str', 'bool', 'tuple'];
 const BASIC_PLAN = { functions: [{ key: 1, name: 'main' },], calls: [] };
@@ -83,6 +85,7 @@ export default function init(
         return strokeColor((o.part.data.problems || []).concat(o.part.data.linkProblems || []));
     }
 
+    // Node template
     diagram.nodeTemplate = new go.Node('Spot', {
         locationSpot: go.Spot.Center,
         isShadowed: true,
@@ -624,31 +627,56 @@ function addNameElement(elem, value, callback, locked=false) {
     name.value = value || '';
     elem.appendChild(name);
 }
+function isContainerType(type) {
+    return type.startsWith("list") || type.startsWith("tuple") || type.startsWith("dict") || type.startsWith("set");
+}
+function removeCustomTypeOption(select) {
+    const options = select.options;
+    if (options[options.length - 1].customType) { select.removeChild(options[options.length - 1]); }
+}
+function addCustomTypeOption(select, type) {
+    removeCustomTypeOption(select);
+    const opt = makeOption(type, type);
+    opt.customType = true;
+    select.options.add(opt);
+    select.value = type;
+}
 function addTypeElement(diagram, elem, value, callback, locked=false) {
+    const holder = document.createElement("span");
+    holder.className = "func-var-type-holder";
+    elem.appendChild(holder);
+
     const type = document.createElement("select");
-    type.addEventListener("click", () => { console.log("click") });
-    type.addEventListener("mousedown", () => { console.log("mousedown") });
-    type.addEventListener("mouseup", () => { console.log("mouseup") });
-    type.addEventListener("input", () => { }); // every change (even without user interaction) updates the last selected value // TODO: type.lastSelected = type.value
     type.addEventListener("change", async () => {
         if (isContainerType(type.value)) {
             const result = await showTypeBuilder(diagram, type.value);
             if (result === null) { type.value = type.lastSelected; return; }
-            console.log("Type changed to:", result);
-            // TODO: use result
-        }
+            addCustomTypeOption(type, result);
+        } else { removeCustomTypeOption(type); }
         callback();
     });
     for (const t of diagram.allowedTypes) { type.appendChild(makeOption(t, t)); }
     type.className = "func-var-type";
-    if (value) {
-        if (diagram.allowedTypes.includes(value)) { type.value = value; } else { type.appendChild(makeOption(value, value)); }
-    } else {
-        type.value = diagram.allowedTypes[0];
-    }
+    if (!value) { type.value = diagram.allowedTypes[0]; }
+    else if (diagram.allowedTypes.includes(value)) { type.value = value; }
+    else { addCustomTypeOption(type, value); }
     type.lastSelected = type.selectedOptions[0].value;
     type.disabled = locked;
-    elem.appendChild(type);
+    holder.appendChild(type);
+
+    if (!locked) {
+        // edit button
+        const button = document.createElement("button");
+        button.type = "button";
+        button.className = "func-var-type-edit";
+        button.title = "Edit Type...";
+        button.innerHTML = "&#9998;";
+        button.addEventListener("click", async () => {
+            const result = await showTypeBuilder(diagram, type.value);
+            if (result !== null) { addCustomTypeOption(type, result); callback(); }
+        });
+        holder.appendChild(button);
+    }
 }
 function addDescElement(elem, value, callback, locked=false) {
     let desc = document.createElement("input");
@@ -692,73 +720,6 @@ function addRemoveButton(elem, callback, locked=false) {
     addVarButton(elem, "remove", () => { elem.parentElement.removeChild(elem); callback(); }, locked);
 }
 
-// TODO: type builder
-function removeAllAfter(node) {
-    let nextNode = node.nextSibling;
-    while (nextNode) {
-        nextNode.remove();
-        nextNode = node.nextSibling;
-    }
-}
-function elementTypeSelect(onchange, types, immutable = false) {
-    const select = document.createElement("select");
-    select.className = "func-elem-type";
-    if (onchange) { select.addEventListener("change", onchange); }
-    types = immutable ? types.filter(x => IMMUTABLE_TYPES.includes(x)) : types;
-    for (let t of types) {
-        let option = document.createElement("option");
-        option.value = t;
-        option.text = t;
-        select.appendChild(option);
-    }
-    return select;
-}
-function elementType(save, types, immutable = false) { // document.createElement("br"), " of ", 
-    return elementTypeSelect((e) => {
-        removeAllAfter(e.target);
-        const type = e.target.value;
-        if (type === "dict") {
-
-        } else if (isContainerType(type)) {
-            e.target.after(" of ", elementType(save, types, immutable || reqImmutable(type)));
-        }
-        save();
-    }, types, immutable);
-}
-function isContainerType(type) {
-    return type.startsWith("list") || type.startsWith("tuple") || type.startsWith("dict") || type.startsWith("set");
-}
-function reqImmutable(type) {
-    return type.startsWith("tuple") || type.startsWith("set");
-}
-function parseType(save, type, element, types, immutable = false) {
-    const words = type.split(" ");
-    const select = elementType(save, types, immutable);
-    element.appendChild(select);
-    select.value = words[0];
-    immutable = immutable || reqImmutable(words[0]);
-
-    if (type.startsWith("dict")) {
-        if (words.length == 1) {
-            select.after(" with keys of ", elementType(save, types, true), 
-                " associated with values of ", elementType(save, types, immutable));
-        } else {
-            select.after(" with keys of ");
-            // parseType(save, words.slice(4, ???).join(" "), element, types, true);
-            // select.after(" associated with values of ");
-            // parseType(save, words.slice(??? + 4).join(" "), element, types, immutable);
-        }
-    } else if (isContainerType(type)) {
-        // TODO: set always "of", list should always be "of", tuple can be "of" or "with" (preferred)
-        if (words.length == 1) {
-            select.after(" of ", elementType(save, types, immutable));
-        } else {
-            select.after(` ${words[1]} `); // TODO: allow toggling?
-            parseType(save, words.slice(2).join(" "), element, types, immutable);
-        }
-    }
-    return type;
-}
 async function showTypeBuilder(diagram, initialType) {
     let result = null;
     const returnValue = await Swal.fire({
@@ -768,13 +729,12 @@ async function showTypeBuilder(diagram, initialType) {
         showCancelButton: true,
         willOpen: (popup) => {
             const content = popup.querySelector('.func-planner-type-builder');
-            function save() {
-                // TODO:
-                //result = Array.prototype.map.call(content.childNodes, x => x.nodeType === Node.TEXT_NODE ? x.textContent : x.value).join("").trim();
-                //console.log("save:", result);
+            function onChange(value) {
+                if (!value.includes('?')) { result = value; }
             }
-            parseType(save, initialType, content, diagram.allowedTypes);
-            save();
+            const editor = new TypeEditor(content, {
+                onChange, allowedTypes: diagram.allowedTypes, initialType: initialType.trim()
+            });
         },
     });
     return returnValue.isConfirmed ? result : null;
@@ -1248,9 +1208,62 @@ function indentText(text, indent=4) {
     indent = " ".repeat(indent);
     return text.split("\n").map(line => indent + line).join("\n");
 }
+
+function splitOnMatchingParen(str) {
+    let stack = [];
+    for (let i = 0; i < str.length; i++) {
+        const char = str[i];
+        if (char === '(') {
+            stack.push(i);
+        } else if (char === ')') {
+            const matchIndex = stack.pop();
+            if (matchIndex === 0) {
+                return [str.slice(1, i).trim(), str.slice(i + 1).trim()];
+            }
+        }
+    }
+    return [null, str];
+}
+function splitOnCommasIgnoringParens(str) {
+    const results = [];
+    let current = '';
+    let parenDepth = 0;
+    for (let i = 0; i < str.length; i++) {
+        const char = str[i];
+        if (char === '(') {
+            parenDepth++;
+            current += char;
+        } else if (char === ')') {
+            parenDepth--;
+            current += char;
+        } else if (char === ',' && parenDepth === 0) {
+            // Split here - comma is not inside parentheses
+            results.push(current.trim());
+            current = '';
+        } else {
+            current += char;
+        }
+    }
+    // Add the last part
+    if (current) { results.push(current.trim()); }
+    return results;
+}
+function removeOuterParens(text) {
+    text = text.trim();
+    if (text.startsWith("(") && text.endsWith(")")) {
+        let [part, rest] = splitOnMatchingParen(text);
+        if (rest === "") { return part; }
+    }
+    return text;
+}
+function normalizeString(text) {
+    return removeOuterParens(text.trim().replace(/\s+/g, ' '));
+}
 function mapList(text, fn) {
-    // TODO: support nested
-    return text.split(",").map(x => fn(x.trim(), plural=true)).join(", ");
+    text = normalizeString(text);
+    text = text.replace(/, ?and\b/, ',').replace(/ and\b/, ', ');  // normalize "and"s to commas
+    console.log("mapList input:", text);
+    return splitOnCommasIgnoringParens(text).map(x => fn(x.trim(), true)).join(", ");
 }
 
 function processDictType(type, fn) {
@@ -1278,6 +1291,7 @@ const DEFAULT_VALUES = {
     "set": "set()",
 }
 function defaultReturnValue(type, plural=false) {
+    type = normalizeString(type);
     if (plural) { type = processPlural(type); }
     if (DEFAULT_VALUES[type]) { return DEFAULT_VALUES[type]; }
     if (type.startsWith("list of ")) { return `[${defaultReturnValue(type.slice(8), true)}]`; }
@@ -1290,16 +1304,21 @@ function defaultReturnValue(type, plural=false) {
     return "None";
 }
 function typeToPython(type, plural=false) {
+    type = normalizeString(type);
     if (plural) { type = processPlural(type); }
-    if (type.startsWith("list of ")) { return `list[${typeToPython(type.slice(8), plural=true)}]`; }  // homogeneous list
+    if (type.startsWith("list of ")) { return `list[${typeToPython(type.slice(8), true)}]`; }  // homogeneous list
     if (type.startsWith("list with ")) { return `list[${mapList(type.slice(10), typeToPython)}]`; }  // heterogeneous list (technically not supported in Python)
-    if (type.startsWith("tuple of ")) { return `tuple[${typeToPython(type.slice(9), plural=true)}, ...]`; }  // homogeneous tuple
+    if (type.startsWith("tuple of ")) { return `tuple[${typeToPython(type.slice(9), true)}, ...]`; }  // homogeneous tuple
     if (type.startsWith("tuple with ")) { return `tuple[${mapList(type.slice(11), typeToPython)}]`; }  // heterogeneous tuple
-    if (type.startsWith("dict of ")) { return `dict[str, ${typeToPython(type.slice(8), plural=true)}]`; }  // dict with keys as strings
+    if (type.startsWith("dict of ")) { return `dict[str, ${typeToPython(type.slice(8), true)}]`; }  // dict with keys as strings
     if (type.startsWith("dict with ")) { return `dict[${processDictType(type, typeToPython).join(", ")}]`; }  // dict with specified key and value types
-    if (type.startsWith("set of ")) { return `set[${typeToPython(type.slice(7), plural=true)}]`; }  // homogeneous set
+    if (type.startsWith("set of ")) { return `set[${typeToPython(type.slice(7), true)}]`; }  // homogeneous set
     return type;
 }
+window.typeToPython = typeToPython;  // for testing
+window.defaultReturnValue = defaultReturnValue;  // for testing
+
+
 const ALPHABET = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
 function letter(n) { return ALPHABET.charAt(n % ALPHABET.length); }
 function getParam(param, i, withTypes=true) {
