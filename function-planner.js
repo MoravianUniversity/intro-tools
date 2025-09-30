@@ -12,6 +12,7 @@
 //import Sortable from 'sortablejs';
 //import Swal from 'sweetalert2'
 
+import { AvoidsLinksRouter } from './AvoidsLinksRouter.js';
 import TypeEditor from './type-editor.js';
 
 const IMMUTABLE_TYPES = ['int', 'float', 'str', 'bool', 'tuple'];
@@ -137,19 +138,41 @@ export default function init(
     //.bindTwoWay('isTreeExpanded')
     .bind('deletable', 'readOnly', (ro) => !ro) // if any property is readOnly, the node is not deletable
 
+    // Link template
     diagram.linkTemplate = new go.Link({
         toShortLength: 3,
         relinkableFrom: true,
         relinkableTo: true,
         deletable: true,
-        routing: go.Routing.Orthogonal,
+        routing: go.Routing.Orthogonal, // maybe Normal or AvoidsNodes may be better?
+        // curve: go.Link.Bezier,
+        // smoothness: 0.1,
         corner: 10,
         layerName: 'Background',
+        doubleClick: (e, link) => {
+            // Reverse the link direction on double-click
+            diagram.startTransaction('reverse link');
+            const from = link.fromNode;
+            const to = link.toNode;
+            link.fromNode = to;
+            link.toNode = from;
+            diagram.commitTransaction('reverse link');
+        },
     }).add(
         new go.Shape({ strokeWidth: 2 }).themeData('stroke', 'linkProblems', null, strokeColor),
         new go.Shape({ toArrow: 'Standard', stroke: null }).themeData('fill', 'linkProblems', null, strokeColor),
     );
+    // Optionally add the AvoidsLinksRouter if available
+    try {
+        // TODO: make the vertical links work better with the LayeredDigraphLayout
+        const router = new AvoidsLinksRouter();
+        router.linkSpacing = 10;
+        diagram.routers.add(router);
+    } catch (e) {
+        console.error("Failed to add optional AvoidsLinksRouter:", e);
+    }
 
+    // Link validation
     function linkValidator(fromNode, fromPort, toNode, toPort, link) {
         if (isCallsIntoRO(toNode.data.readOnly)) { return false; }
         if (isCallsOutOfRO(fromNode.data.readOnly)) { return false; }
@@ -163,16 +186,17 @@ export default function init(
         (part instanceof go.Link) && (isCallsOutOfRO(part.fromNode.data.readOnly) || isCallsIntoRO(part.toNode.data.readOnly))
     );
 
+    // Load and Saving the Model
     const model = (localStorage.getItem(`func-planner-plan-${planId}`)) ?
         JSON.parse(localStorage.getItem(`func-planner-plan-${planId}`)) :
         dup(diagram.initialModel);
     diagram.model = new go.GraphLinksModel(model.functions, model.calls);
     diagram.addModelChangedListener((e) => {
-        if (e.change === go.ChangeType.Transaction) {
-            console.log("Transaction", e.propertyName, e.oldValue);
-        }
+        // if (e.change === go.ChangeType.Transaction) {
+        //     console.log("Transaction", e.propertyName, e.oldValue);
+        // }
         if (e.isTransactionFinished) {
-            console.log("Saving model");
+            //console.log("Saving model");
             localStorage.setItem(`func-planner-plan-${planId}`, JSON.stringify(getModel(diagram)));
         }
     });
@@ -287,8 +311,11 @@ serious warnings with a <span class="stroke-warning">yellow</span> outline.</p>
     <li><span class="bg-output">Output Only</span> - has user output but no direct user input</li>
     <li><span class="bg-none">None / Indirect</span> - no user I/O itself, but may call functions which do</li>
 </ul>
-<p>The buttons on the left allow you to add functions, generate a Python template, save the diagram, and other actions.</p>
-<p>To add a new function call, drag from the edge of one function to another. They can be reconnected as needed.</p>
+<p>The buttons on the left allow you to add functions, generate a Python
+template, save the diagram, and other actions.</p>
+<p>To add a new function call, drag from the edge of one function to another.
+They can be reconnected as needed. Double-clicking a call will reverse its
+direction.</p>
 <p>To remove functions or calls, select them and press the delete key.</p>
 </div>
 `
