@@ -26,16 +26,9 @@
     const planId = "default";
     const initialModel = {
         functions: [
-            { key: 1, name: 'alpha', params: [{'name': 'a', 'type': 'int', 'desc': "The first parameter"}], io: "validation" },
-            { key: 2, name: '', returns: [{'type': 'str', 'desc': 'The return value'}], io: "input" },
-            { key: 3, name: 'main', readOnly: ["params", "returns"] },
-            { key: 4, name: 'delta', io: "output" },
+            { key: 1, name: 'main', readOnly: ["params", "returns"] },
         ],
-        calls: [
-            { from: 1, to: 2 },
-            { from: 3, to: 4 },
-            { from: 3, to: 1 },
-        ]
+        calls: []
     };
     window.addEventListener('DOMContentLoaded', () => {
         init('planner', null, planId, initialModel, null, 2, 1);
