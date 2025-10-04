@@ -233,14 +233,20 @@ div:where(.swal2-container) img:where(.swal2-image) { margin: 2em auto 0 !import
     h2 { font-size: 1.18em; margin: 0; border-bottom: 2px solid var(--text-color); margin: 0; }
     h3 { font-size: 1.1em; margin-bottom: 0; }
     input.func-name { font-family: monospace; font-size: 1.18em; width: 100%; background-color: transparent; border: 1px solid transparent; }
-    textarea { width: 100%; height: 3.5em; resize: vertical; }
+    textarea { width: 100%; min-height: 3.75em; resize: vertical; }
     input:read-only, textarea:read-only { background-color: transparent; border: 1px solid transparent; }
 
     /*:invalid, :user-invalid { background-color: rgb(from var(--error-color) r g b / 0.2) !important; border: 1px solid var(--error-color) !important; }*/
     input, textarea, select { border: 1px solid var(--insp-var-input-border-color); }
+    textarea { field-sizing: content; }
     input.warning, textarea.warning, select.warning { background-color: rgb(from var(--warning-color) r g b / 0.2); border: 1px solid var(--warning-color) !important; accent-color: var(--warning-color); }
     input.error, textarea.error, select.error { background-color: rgb(from var(--error-color) r g b / 0.2); border: 1px solid var(--error-color) !important; accent-color: var(--error-color); }
     select.func-io { field-sizing: content; }
+    .func-code-box {
+        label { font-weight: bold; display: block; margin-bottom: 0.25em; font-size: 1.1em; }
+        textarea.func-code { font-family: monospace; font-size: 0.9em; white-space: pre; tab-size: 4; }
+    }
+
 
     /* Function params/returns */
     .func-var { margin: 0.75em 0; padding: 0.5em; padding-left: 0.6em; border: 1px solid var(--stroke-color); border-radius: 0.5em; background-color: var(--insp-var-background-color); position: relative; box-shadow: 0 0 0.5em var(--shadow-color); }
@@ -349,3 +355,31 @@ div:where(.swal2-container) img:where(.swal2-image) { margin: 2em auto 0 !import
     .add-type-btn { color: green; }
     .remove-type-btn { color: red; }
 }
+
+
+
+/* Python syntax highlighting colors for dark theme from VS Code Dark Modern */
+.func-code {
+  display: block;
+  background: #1f1f1f;
+  padding: 0.5em;
+  white-space: pre;
+  font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+  font-size: 0.9em;
+  overflow: auto;
+  color: white;
+}
+.func-code .token { margin: 0 !important; text-shadow: none !important; color: inherit !important; }
+.func-code .token.comment { color: #6A9955 !important; }
+.func-code .token.operator { color: #D4D4D4 !important; }
+.func-code .token.operator.keyword { color: #569CD6 !important; }  /* the word-operators and, or, not, is */
+.func-code .token.punctuation { color: #CCCCCC !important; }  /* square brackets, parentheses, etc. - should actually take into account nesting */
+.func-code .token.number { color: #B5CEA8 !important; }
+.func-code .token.keyword { color: #C586C0 !important; }
+.func-code .token.boolean { color: #569CD6 !important; }
+.func-code .token.string { color: #CE9178 !important; }
+.func-code .token.variable { color: #9CDCFE !important; }
+.func-code .token.constant { color: #4FC1FF !important; }
+.func-code .token.function, .func-code .token.builtin, .func-code .token.function-call { color: #DCDCAA !important; }
+.func-code .token.class-name, .func-code .token.type { color: #4EC9B0 !important; }
+.func-code::selection, .func-code .token::selection { background: #667B8F !important; }

@@ -4,6 +4,11 @@
  * Future ideas:
  *  - better display of the first line of the function (make it look like Python, text boxes that auto-resize)
  *  - more init options for what should be tested or in the menu
+ *       - module documentation
+ *       - function order?
+ *       - test code
+ *       - global code (imports, constants, etc)
+ *       - used a dictionary of options instead of a long list of parameters
  *  - a few less parentheses in the type editor string generation
  */
 
@@ -463,6 +468,9 @@ function setupFunctionInspector(diagram) {
         inspectorDiv.appendChild(makeTestableCheckbox(diagram, data, set));
         updateProblems();
         inspectorDiv.appendChild(problemsDiv);
+        if (data.showCode) {
+            inspectorDiv.appendChild(makeCodeEditor(diagram, data, update, end));
+        }
     }
 
     diagram.addDiagramListener('ChangedSelection', (e) => {
@@ -500,21 +508,15 @@ function makeFuncName(diagram, data, update, end, inspectorDiv) {
     return h2;
 }
 function makeFuncDesc(diagram, data, update, end) {
-    const textarea = document.createElement('textarea');
-    textarea.className = 'func-desc';
+    const textarea = makeTextarea(data, 'desc', update, end);
     textarea.placeholder = 'Description';
     textarea.required = true;
-    textarea.value = data.desc || '';
-    textarea.readOnly = isReadOnly(data, 'desc');
-    textarea.addEventListener('input', (e) => { update('desc', e.target.value.trim()); });
-    textarea.addEventListener('blur', (e) => { end('desc', e.target.value.trim()); });
     return textarea;
 }
 function createValidIdentifier(name) {
     if (name.includes('(')) { name = name.split('(')[0]; }
     return name.trim().replace(/[^a-zA-Z0-9_]/g, '_');
 }
-
 function makeIOSelect(diagram, data, set) {
     const select = document.createElement('select');
     select.className = 'func-io';
@@ -556,6 +558,51 @@ function wrapWithLabel(elem, text) {
     label.appendChild(span);
     label.appendChild(elem);
     return label;
+}
+function makeCodeEditor(diagram, data, update, end) {
+    let textarea;
+    if (isReadOnly(data, 'code') && typeof Prism !== 'undefined') {
+        textarea = document.createElement('div');
+        textarea.className = 'func-code language-python';
+        textarea.innerHTML = Prism.highlight(data.code || '', Prism.languages.python, 'python');
+    } else {
+        textarea = makeTextarea(data, 'code', update, end);
+        textarea.rows = data.code.trim().split('\n').length + 2;
+        textarea.placeholder = '# Write your function code here\n';
+    }
+
+    const div = document.createElement('div');
+    div.className = 'func-code-box';
+    const label = document.createElement('label');
+    label.textContent = 'Function Code';
+    div.appendChild(label);
+    div.appendChild(textarea);
+    return div;
+}
+function makeTextarea(data, field, update, end) {
+    const textarea = document.createElement('textarea');
+
+    // auto-resize the textarea if field-sizing is not supported
+    if (!CSS.supports("field-sizing: content")) {
+        textarea.addEventListener('input', (e) => {
+            e.target.style.height = "";
+            e.target.style.height = e.target.scrollHeight + 5 + "px";
+        });
+        setTimeout(() => {
+            textarea.style.height = textarea.scrollHeight + 5 + "px";
+        }, 0);
+    }
+
+    // set up the textarea
+    textarea.className = `func-${field}`;
+    textarea.value = data[field] || '';
+    textarea.readOnly = isReadOnly(data, field);
+    if (!textarea.readOnly) {
+        textarea.addEventListener('input', (e) => { update(field, e.target.value); });
+        textarea.addEventListener('blur', (e) => { end(field, e.target.value); });
+    }
+
+    return textarea;
 }
 
 function makeParams(diagram, data, update, end) {
@@ -1289,7 +1336,6 @@ function normalizeString(text) {
 function mapList(text, fn) {
     text = normalizeString(text);
     text = text.replace(/, ?and\b/, ',').replace(/ and\b/, ', ');  // normalize "and"s to commas
-    console.log("mapList input:", text);
     return splitOnCommasIgnoringParens(text).map(x => fn(x.trim(), true)).join(", ");
 }
 
