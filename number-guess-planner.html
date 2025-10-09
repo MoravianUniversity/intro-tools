@@ -48,7 +48,6 @@
                 io: "none",
                 testable: true,
                 code: "diff = guessed - actual\nif diff < 0:\n    return 'Your guess was too low.'\nelif diff < -20:\n    return 'Your guess was too low (not even close)!'\nelif diff > 0:\n    return 'Your guess was too high.'\nelse:\n    return 'Your guess was too high (not even close)!'",
-                showCode: true,
                 readOnly: ['name', 'desc', 'params', 'returns', 'io', 'testable', 'code'],
             },
             {
