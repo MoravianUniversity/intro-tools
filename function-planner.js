@@ -2,13 +2,15 @@
  * This file contains the code for the function planner tool.
  * 
  * Future ideas:
+ *  - make settings to allow using collapse button and recursive functions
  *  - better display of the first line of the function (make it look like Python, text boxes that auto-resize)
  *  - more init options for what should be tested or in the menu
  *       - module documentation
- *       - function order?
  *       - test code
  *       - global code (imports, constants, etc)
  *       - used a dictionary of options instead of a long list of parameters
+ *       - min length of documentation strings
+ *  - in type editor, remove default type of int, require them to always select a type
  *  - a few less parentheses in the type editor string generation
  */
 
@@ -20,10 +22,12 @@
 import { AvoidsLinksRouter } from './AvoidsLinksRouter.js';
 import TypeEditor from './type-editor.js';
 
-const IMMUTABLE_TYPES = ['int', 'float', 'str', 'bool', 'tuple'];
 const BASIC_PLAN = { functions: [{ key: 1, name: 'main' },], calls: [] };
-
 const DEFAULT_ALLOWED_TYPES = ['int', 'float', 'str', 'bool', 'list', 'tuple', 'dict', 'set'];
+
+// TODO: make these settings
+let SHOW_COLLAPSE_BUTTON = true;
+let ALLOW_RECURSIVE = false;
 
 export default function init(
     rootElem,
@@ -100,8 +104,8 @@ export default function init(
         toolTip: createToolTip(rootElem),
 
         // hide the expand/collapse button when not selected or hovered
-        mouseEnter: (e, node) => (node.findObject('BUTTON_EXPAND').opacity = 1),
-        mouseLeave: (e, node) => (node.findObject('BUTTON_EXPAND').opacity = node.isSelected ? 1 : 0),
+        mouseEnter: (e, node) => ((node.findObject('BUTTON_EXPAND') ?? {}).opacity = 1),
+        mouseLeave: (e, node) => ((node.findObject('BUTTON_EXPAND') ?? {}).opacity = node.isSelected ? 1 : 0),
     }).add(
         new go.Panel("Auto", { name: 'BODY' }).add(
             new go.Shape('RoundedRectangle', {
@@ -129,19 +133,21 @@ export default function init(
                 .theme('stroke', 'stroke').theme('font', 'text')
                 .bind('text', '', (data) => `${data.name || `function${data.key}`}()`),
         ),
-        go.GraphObject.build('TreeExpanderButton', {
+    )
+    .theme('shadowColor', 'shadow')
+    .bindObject('layerName', 'isSelected', (sel) => (sel ? 'Foreground' : ''))
+    .bind('deletable', 'readOnly', (ro) => !ro) // if any property is readOnly, the node is not deletable
+    if (SHOW_COLLAPSE_BUTTON) {
+        diagram.nodeTemplate.add(go.GraphObject.build('TreeExpanderButton', {
             alignment: go.Spot.Bottom,
             alignmentFocus: go.Spot.Center,
             _treeExpandedFigure: 'LineUp',
             _treeCollapsedFigure: 'LineDown',
             name: 'BUTTON_EXPAND',
             opacity: 0
-        }).bindObject('opacity', 'isSelected', (s) => (s ? 1 : 0))
-    )
-    .theme('shadowColor', 'shadow')
-    .bindObject('layerName', 'isSelected', (sel) => (sel ? 'Foreground' : ''))
-    //.bindTwoWay('isTreeExpanded')
-    .bind('deletable', 'readOnly', (ro) => !ro) // if any property is readOnly, the node is not deletable
+        }).bindObject('opacity', 'isSelected', (s) => (s ? 1 : 0)));
+        //.bindTwoWay('isTreeExpanded')
+    }
 
     // Link template
     diagram.linkTemplate = new go.Link({
@@ -183,6 +189,7 @@ export default function init(
         if (isCallsOutOfRO(fromNode.data.readOnly)) { return false; }
         if (link && link.fromNode !== fromNode && isCallsIntoRO(link.fromNode.data.readOnly)) { return false; }
         if (link && link.toNode !== toNode && isCallsOutOfRO(link.toNode.data.readOnly)) { return false; }
+        if (!ALLOW_RECURSIVE && fromNode === toNode) { return false; } // TODO: indirect recursion as well?
         return true;
     }
     diagram.toolManager.linkingTool.linkValidation = linkValidator;
