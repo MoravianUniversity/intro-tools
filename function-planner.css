@@ -239,6 +239,7 @@ div:where(.swal2-container) img:where(.swal2-image) { margin: 2em auto 0 !import
     /*:invalid, :user-invalid { background-color: rgb(from var(--error-color) r g b / 0.2) !important; border: 1px solid var(--error-color) !important; }*/
     input, textarea, select { border: 1px solid var(--insp-var-input-border-color); }
     textarea { field-sizing: content; }
+    input::placeholder, textarea::placeholder, select:has(option[value=""]:checked) { color: #666; opacity: 1; font-style: italic; }
     input.warning, textarea.warning, select.warning { background-color: rgb(from var(--warning-color) r g b / 0.2); border: 1px solid var(--warning-color) !important; accent-color: var(--warning-color); }
     input.error, textarea.error, select.error { background-color: rgb(from var(--error-color) r g b / 0.2); border: 1px solid var(--error-color) !important; accent-color: var(--error-color); }
     select.func-io { field-sizing: content; }

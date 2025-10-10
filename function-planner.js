@@ -652,7 +652,7 @@ function createSectionHeader(title) {
 }
 function createVarsBox(diagram, name, field, data, update, end, saveVar, makeVar) {
     const div = document.createElement("div");
-    div.className = "func-params func-vars";
+    div.className = `func-${field} func-vars`;
     const list = document.createElement("div");
 
     function save(major=false) { saveVar(list, update, end, major); }
@@ -729,11 +729,11 @@ function addTypeElement(diagram, elem, value, callback, locked=false) {
         } else { removeCustomTypeOption(type); }
         callback();
     });
+    type.appendChild(makeOption("", "type")); // blank option
     for (const t of diagram.allowedTypes) { type.appendChild(makeOption(t, t)); }
     type.className = "func-var-type";
-    if (!value) { type.value = diagram.allowedTypes[0]; }
-    else if (diagram.allowedTypes.includes(value)) { type.value = value; }
-    else { addCustomTypeOption(type, value); }
+    if (value && diagram.allowedTypes.includes(value)) { type.value = value; }
+    else if (value) { addCustomTypeOption(type, value); }
     type.lastSelected = type.selectedOptions[0].value;
     type.disabled = locked;
     holder.appendChild(type);
