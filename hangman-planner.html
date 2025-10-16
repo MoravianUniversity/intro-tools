@@ -2,86 +2,85 @@
 <html>
 <head>
     <title>Hangman Function Planner</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+        }
+        #planner {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+        }
+    </style>
     <link rel="stylesheet" type="text/css" href="function-planner.css">
-    <script src="https://unpkg.com/sweetalert/dist/sweetalert.min.js"></script>
-    <script src="https://unpkg.com/@popperjs/core@2"></script>
-    <script src="https://unpkg.com/tippy.js@6"></script>
+    <script src="https://unpkg.com/gojs@3.0.22"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sortablejs@latest/Sortable.min.js"></script>
+    <script src="https://unpkg.com/sweetalert2@11.22.0/dist/sweetalert2.min.js"></script>
+    <script src="https://unpkg.com/prismjs@1.30.0/components/prism-core.min.js"></script>
+    <script src="https://unpkg.com/prismjs@1.30.0/components/prism-python.min.js"></script>
+    <link rel="stylesheet" href="https://unpkg.com/sweetalert2@11.22.0/dist/sweetalert2.min.css">
     <script type="module">
     import init from "./function-planner.js";
-    let default_model = [
-    {
-        "name": "select_word",
-        "desc": "TODO: Nothing about this function is done.",
-    },
-    {
-        "name": "game_is_not_over",
-        "desc": "TODO: Nothing about this function is done.",
-    },
-    {
-        "name": "print_status",
-        "desc": "TODO: Nothing about this function is done.",
-    },
-    {
-        "name": "play_round",
-        "desc": "TODO: Nothing about this function is done.",
-    },
-    {
-        "name": "read_words",
-        "desc": "Read all of the words from the given file into a list.",
-        "params": [{"name": "filename", "type": "str", "desc": "the name of the file to get the words from"}],
-        "returns": [{"type": "list of str", "desc": "the words from the file"}],
-        "calls": [],
-        "input": "none",
-        "output": "none",
-        "testable": false,
-        "code": "with open(filename, 'r') as file:\n    return file.read().split()",
-        "locked": true,
-        "minimized": true
-    },
-    {
-        "name": "play_game",
-        "desc": "Play a game with the given word (and return True if the user won (guessed the word) and False if the user lost (made 5 mistakes).",
-        "params": [{"name": "word", "type": "str", "desc": "the word that is being guessed"}],
-        "returns": [{"type": "bool", "desc": "True if the user won the game, False otherwise"}],
-        "calls": ["game_is_not_over", "print_status", "play_round"],
-        "input": "indirect",
-        "output": "indirect",
-        "testable": false,
-        "code": "# Create a word that is the same length as word but is all _ characters\nguessed_word = \"_\" * len(word)\n\n# Play rounds until the guessed word is complete or the user has 5 mistakes\nguessed_letters = []\nmistakes = 0\nwhile game_is_not_over(word, guessed_word, mistakes):\n    print_status(guessed_word, mistakes, guessed_letters)\n    guessed_word, mistakes = play_round(word, guessed_word, guessed_letters, mistakes)\n    print()\n\n# Return if the user won or lost\nreturn guessed_word == word",
-        "locked": true,
-        "minimized": true
-    },
-    {
-        "name": "update_guessed_word",
-        "desc": "Create a new guessed word, replacing the corresponding _ with the guessed letter.",
-        "params": [
-            {"name": "word", "type": "str", "desc": "the actual word that is being guessed"},
-            {"name": "guessed_word", "type": "str", "desc": "the word that has been guessed so far with at least a few blanks remaining it"},
-            {"name": "guessed_letter", "type": "str", "desc": "the letter that has been guessed, fills in some of the blanks"}
+    let initialModel = {
+        functions: [
+            {
+                key: 1,
+                name: "main",
+                io: "indirect",
+                code: "# Get the random word from the list of words\nword = select_word()\n# Play the game and print out the final results\nif play_game(word):\n    print(f\"Congratulations! The word was '{word}'\")\nelse:\n    print(f\"Too many mistakes... The word was '{word}'\")",
+                showCode: true,
+                readOnly: ['name', 'desc', 'params', 'returns', 'io', 'testable', 'code'],
+            },
+            {
+                key: 2,
+                name: "read_words",
+                desc: "Read all of the words from the given file into a list.",
+                params: [{"name": "filename", "type": "str", "desc": "the name of the file to get the words from"}],
+                returns: [{"type": "list of str", "desc": "the words from the file"}],
+                code: "with open(filename, 'r') as file:\n    return file.read().split()",
+                showCode: true,
+                readOnly: ['name', 'desc', 'params', 'returns', 'io', 'testable', 'code'],
+            },
+            {
+                key: 3,
+                name: "play_game",
+                desc: "Play a game with the given word (and return True if the user won (guessed the word) and False if the user lost (made 5 mistakes).",
+                params: [{"name": "word", "type": "str", "desc": "the word that is being guessed"}],
+                returns: [{"type": "bool", "desc": "True if the user won the game, False otherwise"}],
+                io: "indirect",
+                code: "# Create a word that is the same length as word but is all _ characters\nguessed_word = \"_\" * len(word)\n\n# Play rounds until the guessed word is complete or the user has 5 mistakes\nguessed_letters = []\nmistakes = 0\nwhile game_is_not_over(word, guessed_word, mistakes):\n    print_status(guessed_word, mistakes, guessed_letters)\n    guessed_word, mistakes = play_round(word, guessed_word, guessed_letters, mistakes)\n    print()\n\n# Return if the user won or lost\nreturn guessed_word == word",
+                showCode: true,
+                readOnly: ['name', 'desc', 'params', 'returns', 'io', 'testable', 'code'],
+            },
+            {
+                key: 4,
+                name: "update_guessed_word",
+                desc: "Create a new guessed word, replacing the corresponding _ with the guessed letter.",
+                params: [
+                    {"name": "word", "type": "str", "desc": "the actual word that is being guessed"},
+                    {"name": "guessed_word", "type": "str", "desc": "the word that has been guessed so far with at least a few blanks remaining it"},
+                    {"name": "guessed_letter", "type": "str", "desc": "the letter that has been guessed, fills in some of the blanks"}
+                ],
+                returns: [{"type": "str", "desc": "the new guessed word with the guessed letter filled in"}],
+                io: "none",
+                testable: true,
+                code: "new_guessed_word = \"\"\nfor i in range(len(word)):\n    if word[i] == guessed_letter:\n        new_guessed_word += guessed_letter\n    else:\n        new_guessed_word += guessed_word[i]\nreturn new_guessed_word",
+                showCode: true,
+                readOnly: ['name', 'desc', 'params', 'returns', 'io', 'testable', 'code'],
+            }
         ],
-        "returns": [{"type": "str", "desc": "the new guessed word with the guessed letter filled in"}],
-        "calls": [],
-        "input": "none",
-        "output": "none",
-        "testable": true,
-        "code": "new_guessed_word = \"\"\nfor i in range(len(word)):\n    if word[i] == guessed_letter:\n        new_guessed_word += guessed_letter\n    else:\n        new_guessed_word += guessed_word[i]\nreturn new_guessed_word",
-        "locked": true,
-        "minimized": true
-    },
-    {
-        "name": "main", "desc": "", "params": [], "returns": [],
-        "input": "indirect", "output": "indirect", "testable": false, "locked": true, "minimized": true,
-        "calls": ["select_word", "play_game"]
-    }
-];
-    let allowed_types = ["int", "str", "float", "bool", "list of int", "list of str", "list of float", "list of bool"];
+        calls: []
+    };
     document.addEventListener("DOMContentLoaded", () => {
-        init(document.getElementById("planner"), "hangman", default_model, allowed_types, 9, 2);
+        init("planner", "Hangman", "hangman", initialModel, ["int", "str", "float", "bool", "list"], 9, 2);
     });
     </script>
 </head>
 <body>
-    <h1>Hangman Function Planner</h1>
     <div id="planner"></div>
 </body>
 </html>

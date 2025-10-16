@@ -245,7 +245,7 @@ div:where(.swal2-container) img:where(.swal2-image) { margin: 2em auto 0 !import
     select.func-io { field-sizing: content; }
     .func-code-box {
         label { font-weight: bold; display: block; margin-bottom: 0.25em; font-size: 1.1em; }
-        textarea.func-code { font-family: monospace; font-size: 0.9em; white-space: pre; tab-size: 4; }
+        textarea.func-code { font-family: monospace; font-size: 0.9em; white-space: pre; tab-size: 4; color: var(--text-color); }
     }
 
 
