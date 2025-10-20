@@ -5,13 +5,15 @@
  *  - make settings to allow using collapse button and recursive functions
  *  - better display of the first line of the function (make it look like Python, text boxes that auto-resize)
  *  - more init options for what should be tested or in the menu
- *       - module documentation
+ *       - module (& test module) documentation
  *       - test code
  *       - global code (imports, constants, etc)
  *       - used a dictionary of options instead of a long list of parameters
  *       - min length of documentation strings
+ *       - some model settings propagate into in-progress model without resetting
  *  - in type editor, remove default type of int, require them to always select a type
  *  - a few less parentheses in the type editor string generation
+ *  - server side saving and loading of plans, instructor side of things
  */
 
 // TODO: proper imports? maybe an import map? https://developer.mozilla.org/en-US/docs/Web/HTML/Reference/Elements/script/type/importmap
@@ -1019,6 +1021,7 @@ function modelProblems(diagram) {
     //if (nTestable < min_testable) { problems.push(["error", "testable", `There must be at least ${min_testable} testable functions.`]); }
 }
 function modelLinkProblems(diagram, startingKey = null) {
+    // TODO: when main gets a parent that is then removed, it still thinks it's a problem until refreshed
     const model = diagram.model;
     const cycles = findCycles(diagram, startingKey).filter(cycle => cycle.length > 1); // only cycles with more than one node (self-recursive functions are already handled)
     const map = cyclesToMap(cycles);
@@ -1201,7 +1204,9 @@ function funcProblems(data, diagram, fix=false) {
     } else {
         if (desc.length === 0) { problems.push(["warning", "desc", "Function description is required."]); }
         else if (desc.length < 20) { problems.push(["warning", "desc", "Function description is too short - be more descriptive!"]); }
-        if (params.length === 0 && returns.length === 0) { problems.push(["error", "params,returns", "Non-main functions should have at least one parameter or return value."]); }
+        if (params.length === 0 && returns.length === 0 && io !== 'output') {
+            problems.push(["error", "params,returns", "Non-main functions should have at least one parameter or return value, or be output only."]);
+        }
         const names = [];
         for (let i = 0; i < params.length; i++) {
             const param = params[i];
