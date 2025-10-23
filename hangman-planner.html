@@ -68,7 +68,7 @@
                 returns: [{"type": "str", "desc": "the new guessed word with the guessed letter filled in"}],
                 io: "none",
                 testable: true,
-                code: "new_guessed_word = \"\"\nfor i in range(len(word)):\n    if word[i] == guessed_letter:\n        new_guessed_word += guessed_letter\n    else:\n        new_guessed_word += guessed_word[i]\nreturn new_guessed_word",
+                code: "new_guessed_word = \"\"\nfor i, letter in enumerate(word):\n    if letter == guessed_letter:\n        new_guessed_word += guessed_letter\n    else:\n        new_guessed_word += guessed_word[i]\nreturn new_guessed_word",
                 showCode: true,
                 readOnly: ['name', 'desc', 'params', 'returns', 'io', 'testable', 'code'],
             }
