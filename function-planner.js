@@ -1356,7 +1356,7 @@ function processDictType(type, fn) {
     let [key, value] = type.split(" associated with ");  // TODO: nested
     if (key.startsWith("keys of ")) { key = key.slice(8); }
     if (value.startsWith("values of ")) { value = value.slice(10); }
-    return [fn(key, plural=true), fn(value, plural=true)];
+    return [fn(key, true), fn(value, true)];
 }
 function processPlural(type) {
     // first word can be ints, floats, strs, bools, tuples, dicts, sets
