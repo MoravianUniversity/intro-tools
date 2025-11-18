@@ -24,14 +24,8 @@
     <script type="module">
     import init from "./function-planner.js";
     const planId = "default";
-    const initialModel = {
-        functions: [
-            { key: 1, name: 'main', readOnly: ["params", "returns"] },
-        ],
-        calls: []
-    };
     window.addEventListener('DOMContentLoaded', () => {
-        init('planner', null, planId, initialModel, null, 2, 1);
+        init('planner', null, planId, null, null, 2, 1);
     });
     </script>
 </head>

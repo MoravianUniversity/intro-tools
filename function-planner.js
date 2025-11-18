@@ -13,7 +13,7 @@
  *       - some model settings propagate into in-progress model without resetting
  *  - in type editor, remove default type of int, require them to always select a type
  *  - a few less parentheses in the type editor string generation
- *  - server side saving and loading of plans, instructor side of things
+ *  - server side saving and loading of plans, collaboration, instructor side of things
  */
 
 // TODO: proper imports? maybe an import map? https://developer.mozilla.org/en-US/docs/Web/HTML/Reference/Elements/script/type/importmap
@@ -53,6 +53,7 @@ export default function init(
         maxSelectionCount: 1,
         layout: new go.LayeredDigraphLayout({ direction: 90, /*layerSpacing: 25,*/ columnSpacing: 30, }),
         'undoManager.isEnabled': true,
+        'toolManager.hoverDelay': 250,
         'toolManager.toolTipDuration': 1e10,
     });
     diagram.allowedTypes = allowedTypes || DEFAULT_ALLOWED_TYPES;
@@ -66,6 +67,8 @@ export default function init(
             'stroke-error': '#dc2626',
             'stroke-warning': '#f59e0b',
             shadow: '#9ca3af',
+            'selection': '#0ea5e9',
+            'selection-trans': 'rgba(14, 165, 233, 0.5)',
 
             // background colors for nodes based on user I/O and testability
             'bg-testable': '#090',
@@ -74,6 +77,7 @@ export default function init(
             'bg-output': '#09f',
             'bg-indirect': '#d1d5db',
             'bg-none': '#d1d5db',
+            'bg-undefined': '#d1d5db', // TODO: this comes up sometimes? setting main to testable and then back to non-testable
         },
         fonts: {
             text: '14px monospace', // 0.875rem - using a rem unit messes up rendering
@@ -173,7 +177,8 @@ export default function init(
         },
     }).add(
         new go.Shape({ strokeWidth: 2 }).themeData('stroke', 'linkProblems', null, strokeColor),
-        new go.Shape({ toArrow: 'Standard', stroke: null }).themeData('fill', 'linkProblems', null, strokeColor),
+        new go.Shape({ toArrow: 'Standard', scale: 1.4, stroke: null })
+            .themeData('fill', 'linkProblems', null, strokeColor)
     );
     // Optionally add the AvoidsLinksRouter if available
     try {
@@ -184,6 +189,10 @@ export default function init(
     } catch (e) {
         console.error("Failed to add optional AvoidsLinksRouter:", e);
     }
+    diagram.toolManager.relinkingTool.fromHandleArchetype = new go.Shape('Diamond',
+        { width: 12, height: 12, segmentIndex: 0, cursor: 'pointer' }).theme('fill', 'selection-trans');
+    diagram.toolManager.relinkingTool.toHandleArchetype = new go.Shape('Diamond',
+        { width: 12, height: 12, segmentIndex: -1, cursor: 'pointer' }).theme('fill', 'selection-trans');
 
     // Link validation
     function linkValidator(fromNode, fromPort, toNode, toPort, link) {
@@ -856,6 +865,7 @@ function makeButtons(diagram) {
     addButton(holder, 'unit-tests.svg', '', 'Generate Python Unit Tests', () => { exportPythonTests(diagram); });
     addButton(holder, 'save.svg', 'no-outline', 'Save as JSON', () => { saveJSON(diagram); });
     addButton(holder, 'load.svg', 'no-outline', 'Load from JSON', () => { loadJSON(diagram); });
+    addButton(holder, 'merge.svg', 'no-outline', 'Merge from JSON', () => { importJSON(diagram); });
 }
 function addButton(holder, icon, classes, name, callback) {
     const button = document.createElement('button');
@@ -1538,6 +1548,15 @@ function setModel(diagram, model) {
     diagram.model = new go.GraphLinksModel(model.functions, model.calls);
     updateAllProblems(diagram);
 }
+function mergeModel(diagram, model) {
+    if (!model.functions || !model.calls) { return "Invalid model format. Expected 'functions' and 'calls' keys."; }
+    const maxKey = diagram.model.nodeDataArray.reduce((max, n) => Math.max(max, n.key), -1);
+    model.functions.forEach(func => { func.key += maxKey; });
+    model.calls.forEach(call => { call.from += maxKey; call.to += maxKey; });
+    diagram.model.addNodeDataCollection(model.functions);
+    diagram.model.addLinkDataCollection(model.calls);
+    updateAllProblems(diagram);
+}
 function reset(diagram, confirm = true) {
     if (confirm) {
         confirmDialog("Reset to Default?", "Are you sure you want to load the default functions for this plan? This will clear the current plan.",
@@ -1577,7 +1596,7 @@ function loadJSON(diagram) {
     Swal.fire({
         theme: diagram.themeManager.currentTheme,
         title: "Load JSON",
-        html: "Paste the JSON data below.<br>This will overwrite the current plan.",
+        html: "Paste the JSON data below.<br>This will <em>overwrite</em> the current plan.",
         input: "textarea",
         showCancelButton: true,
         showCloseButton: true,
@@ -1591,14 +1610,37 @@ function loadJSON(diagram) {
         },
     }).then((result) => {
         if (!result.isConfirmed) { return; }
-        loadJSONString(diagram, result.value);
+        loadJSONString(diagram, result.value, false);
     });
 }
-function loadJSONString(diagram, json) {
+function importJSON(diagram) {
+    Swal.fire({
+        theme: diagram.themeManager.currentTheme,
+        title: "Import JSON",
+        html: "Select a JSON file to import.<br>This will <em>merge</em> the current plan.",
+        input: "textarea",
+        showCancelButton: true,
+        showCloseButton: true,
+        inputValidator: (value) => {
+            if (!value) { return "JSON data is required."; }
+            try {
+                const model = JSON.parse(value);
+                if (!model.functions || !model.calls) { return "Invalid JSON format. Expected 'functions' and 'calls' keys."; }
+            } catch (e) { return "Invalid JSON format"; }
+            return null;
+        },
+    }).then((result) => {
+        if (!result.isConfirmed) { return; }
+        loadJSONString(diagram, result.value, true);
+    });
+}
+
+function loadJSONString(diagram, json, merge=false) {
     try {
         const model = JSON.parse(json);
         if (!model.functions || !model.calls) { throw new Error("Invalid JSON format. Expected 'functions' and 'calls' keys."); }
-        setModel(diagram, model);
+        if (merge) { mergeModel(diagram, model); }
+        else { setModel(diagram, model); }
     } catch (e) {
         console.error("Invalid JSON data:", e);
         Swal.fire({
