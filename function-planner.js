@@ -1214,9 +1214,9 @@ function funcProblems(data, diagram, fix=false) {
     } else {
         if (desc.length === 0) { problems.push(["warning", "desc", "Function description is required."]); }
         else if (desc.length < 20) { problems.push(["warning", "desc", "Function description is too short - be more descriptive!"]); }
-        if (params.length === 0 && returns.length === 0 && io !== 'output') {
-            problems.push(["error", "params,returns", "Non-main functions should have at least one parameter or return value, or be output only."]);
-        }
+        // if (params.length === 0 && returns.length === 0 && io !== 'output') {
+        //     problems.push(["error", "params,returns", "Non-main functions should have at least one parameter or return value, or be output only."]);
+        // }
         const names = [];
         for (let i = 0; i < params.length; i++) {
             const param = params[i];
