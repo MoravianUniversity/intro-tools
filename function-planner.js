@@ -2,16 +2,17 @@
  * This file contains the code for the function planner tool.
  * 
  * Future ideas:
- *  - make settings to allow using collapse button and recursive functions
  *  - better display of the first line of the function (make it look like Python, text boxes that auto-resize)
  *  - more init options for what should be tested or in the menu
- *       - module (& test module) documentation
- *       - test code
- *       - global code (imports, constants, etc)
- *       - used a dictionary of options instead of a long list of parameters
- *       - min length of documentation strings
- *       - some model settings propagate into in-progress model without resetting
- *  - in type editor, remove default type of int, require them to always select a type
+ *       - general:
+ *            - plan name
+ *            - author names
+ *            - module (& test module) documentation (should be able to see and edit if not read-only)
+ *            - global code (imports, constants, etc) (should be able to see and edit if not read-only)
+ *            - min length of documentation strings
+ *       - per-function:
+ *            - test code (should be able to see and edit if not read-only)
+ *       - some model settings propagate into in-progress model without resetting? (i.e. new functions, into read-only functions, etc)
  *  - a few less parentheses in the type editor string generation
  *  - server side saving and loading of plans, collaboration, instructor side of things
  */
@@ -19,7 +20,7 @@
 // TODO: proper imports? maybe an import map? https://developer.mozilla.org/en-US/docs/Web/HTML/Reference/Elements/script/type/importmap
 //import * as go from 'gojs';
 //import Sortable from 'sortablejs';
-//import Swal from 'sweetalert2'
+//import Swal from 'sweetalert2';
 
 import { AvoidsLinksRouter } from './AvoidsLinksRouter.js';
 import TypeEditor from './type-editor.js';
@@ -27,16 +28,35 @@ import TypeEditor from './type-editor.js';
 const BASIC_PLAN = { functions: [{ key: 1, name: 'main' },], calls: [] };
 const DEFAULT_ALLOWED_TYPES = ['int', 'float', 'str', 'bool', 'list', 'tuple', 'dict', 'set'];
 
-// TODO: make these settings
-let SHOW_COLLAPSE_BUTTON = true;
-let ALLOW_RECURSIVE = false;
+// Settings
+const SHOW_COLLAPSE_BUTTON = localStorage.getItem('func-planner-show-collapse-button') === 'true';
+const ALLOW_RECURSIVE = localStorage.getItem('func-planner-allow-recursive') === 'true';
 
+/**
+ * Initialize the Function Planner in the given root element.
+ * @param {HTMLElement|string} rootElem
+ * @param {string} planId - Unique identifier for the plan (used for saving in localStorage)
+ * @param {object} options - Additional options
+ * @param {string} options.title - Title to show at the top of the diagram, optional
+ * @param {object} options.initialModel - Initial model to load if no saved model exists, defaults to a basic plan with a single "main" function
+ * @param {string[]} options.allowedTypes - List of allowed types for function parameters and returns
+ * @param {number} options.minFunctions - Minimum number of functions required (for validation), defaults to 1
+ * @param {number} options.minTestable - Minimum number of testable functions required (for validation), defaults to 0
+ */
 export default function init(
     rootElem,
-    title=null, planId=null, initialModel=null, allowedTypes=null,
-    minFunctions=1, minTestable=0
+    planId,
+    options={},
 ) {
     rootElem = typeof rootElem === 'string' ? document.getElementById(rootElem) : rootElem;
+
+    const {
+        title,
+        initialModel,
+        allowedTypes,
+        minFunctions=1,
+        minTestable=0
+    } = options;
 
     rootElem.classList.add("func-planner");
     const diagramDiv = document.createElement("div");
@@ -52,13 +72,13 @@ export default function init(
         defaultScale: 1.5,
         padding: 125,
         maxSelectionCount: 1,
-        layout: new go.LayeredDigraphLayout({ direction: 90, /*layerSpacing: 25,*/ columnSpacing: 30, }),
+        layout: new go.LayeredDigraphLayout({ direction: 90, layerSpacing: 50, columnSpacing: 30 }),
         'undoManager.isEnabled': true,
         'toolManager.hoverDelay': 250,
         'toolManager.toolTipDuration': 1e10,
     });
-    diagram.allowedTypes = allowedTypes || DEFAULT_ALLOWED_TYPES;
     diagram.planId = planId;
+    diagram.allowedTypes = allowedTypes || DEFAULT_ALLOWED_TYPES;
     diagram.initialModel = initialModel || BASIC_PLAN;
 
     diagram.themeManager.set('light', {
@@ -230,6 +250,7 @@ export default function init(
         diagram.add(new go.Part({ layerName: "ViewportBackground", alignment: go.Spot.Top })
             .add(new go.TextBlock(title, {margin: 20}).theme('font', 'title').theme('stroke', 'text')));
     }
+    makeSettingsButton(diagram);
     makeThemeToggle(diagram);
     makeButtons(diagram);
     makeInfoBox(diagram, minFunctions, minTestable);
@@ -798,11 +819,11 @@ function addVarButton(elem, name, callback, locked=false) {
     const button = document.createElement("div");
     button.className = "func-var-button func-var-button-" + name;
     button.addEventListener("click", callback);
-    fetch(`${name}.svg`)
+    fetch(`images/${name}.svg`)
         .then(response => response.text())
         .then(svg => { button.innerHTML = svg; })
         .catch(err => {
-            console.error(`Error loading ${name}.svg:`, err);
+            console.error(`Error loading images/${name}.svg:`, err);
             button.textContent = name === "remove" ? "x" : "+"; // fallback text
         });
     elem.appendChild(button);
@@ -839,7 +860,15 @@ async function showTypeBuilder(diagram, initialType) {
     return returnValue.isConfirmed ? result : null;
 }
 
+function isMacOS() {
+    const platform = window.navigator?.userAgentData?.platform || window.navigator.platform;
+    return platform.toLowerCase().indexOf('mac') !== -1;
+}
+
 function makeButtons(diagram) {
+    const isMac = isMacOS()
+    const ctrl = isMac ? '⌘' : 'CTRL+';
+
     const widgets = document.createElement('div');
     widgets.className = 'func-planner-widgets';
     diagram.div.parentNode.appendChild(widgets);
@@ -848,8 +877,7 @@ function makeButtons(diagram) {
     holder.className = 'button-holder';
     widgets.appendChild(holder);
 
-    addButton(holder, 'magnifier.svg', '', 'Zoom to Fit', () => { diagram.zoomToFit(); });
-    addButton(holder, 'add.svg', 'no-outline', 'Add Function', () => {
+    function addFunction() {
         let key = diagram.model.nodeDataArray.length + 1;
         while (diagram.model.findNodeDataForKey(key)) { key++; } // ensure unique key
         diagram.model.addNodeData({
@@ -857,16 +885,33 @@ function makeButtons(diagram) {
             params: [], returns: [], io: "none",
             readOnly: false, testable: false,
         });
-    });
-    addButton(holder, 'reset.svg', 'no-outline', 'Reset', () => { reset(diagram); });
+    }
 
-    let undoButton = addButton(holder, 'undo.svg', 'no-outline', 'Undo', () => { if (diagram.undoManager.canUndo()) { diagram.undoManager.undo(); } });
+    addButton(holder, 'magnifier.svg', '', `Zoom to Fit (${ctrl}R)`, () => { diagram.zoomToFit(); });
+    addButton(holder, 'add.svg', 'no-outline', `Add Function (${ctrl}F)`, () => { addFunction(); });
+
+    document.addEventListener('keydown', (e) => {
+        if ((isMac ? e.metaKey : e.ctrlKey) && !e.shiftKey && !e.altKey) {
+            const key = e.key.toLowerCase();
+            if (key === 'r') {
+                e.preventDefault();
+                diagram.zoomToFit();
+            } else if (key === 'f') {
+                e.preventDefault();
+                addFunction();
+            }
+        }
+    });
+
+    let undoButton = addButton(holder, 'undo.svg', 'no-outline', `Undo (${ctrl}Z)`, () => { if (diagram.undoManager.canUndo()) { diagram.undoManager.undo(); } });
     undoButton.disabled = !diagram.undoManager.canUndo();
     diagram.addModelChangedListener((e) => {
         if (e.isTransactionFinished) {
             undoButton.disabled = !diagram.undoManager.canUndo() || diagram.undoManager.transactionToUndo.name === 'Initial Layout';
         }
     });
+
+    addButton(holder, 'reset.svg', 'no-outline', `Reset`, () => { reset(diagram); });
 
     addButton(holder, 'python.svg', '', 'Create Python Template', () => { exportToPython(diagram); });
     addButton(holder, 'unit-tests.svg', '', 'Generate Python Unit Tests', () => { exportPythonTests(diagram); });
@@ -879,13 +924,13 @@ function addButton(holder, icon, classes, name, callback) {
     let img;
     if (icon.toLowerCase().endsWith('.svg')) {
         img = document.createElement('div');
-        fetch(icon)
+        fetch(`images/${icon}`)
             .then(response => response.text())
             .then(svg => { img.innerHTML = svg; })
             .catch(err => console.error("Error loading icon:", err));
     } else {
         img = document.createElement('img');
-        img.src = icon;
+        img.src = `images/${icon}`;
     }
     img.classList = classes + " func-planner-icon";
     button.appendChild(img);
@@ -931,6 +976,38 @@ function makeThemeToggle(diagram) {
         localStorage.setItem('func-planner-theme', e.target.checked ? 'dark' : 'light');
         diagram.themeManager.currentTheme = e.target.checked ? 'dark' : 'light';
         diagram.div.parentNode.classList.toggle('dark-mode', e.target.checked);
+    });
+}
+function makeSettingsButton(diagram) {
+    const button = document.createElement('div');
+    button.className = 'func-planner-settings-button no-outline';
+    button.title = 'Settings';
+    fetch('images/settings.svg')
+        .then(response => response.text())
+        .then(svg => { button.innerHTML = svg; })
+        .catch(err => { console.error('Error loading images/settings.svg:', err); });
+    diagram.div.parentNode.appendChild(button);
+
+    button.addEventListener('click', () => {
+        Swal.fire({
+            theme: diagram.themeManager.currentTheme,
+            title: 'Function Planner Settings',
+            html: `<div class="func-planner-settings">
+  <label><span>Show Collapse Button:</span><input type="checkbox" class="show-collapse-button" ${SHOW_COLLAPSE_BUTTON ? 'checked' : ''}></label><br>
+  <label><span>Allow Recursive Calls:</span><input type="checkbox" class="allow-recursive" ${ALLOW_RECURSIVE ? 'checked' : ''}></label>
+</div>`,
+            showCancelButton: true,
+        }).then((result) => {
+            if (result.isConfirmed) {
+                const popup = Swal.getPopup();
+                const showCloseButton = popup.getElementsByClassName('show-collapse-button')[0].checked;
+                const allowRecursive = popup.getElementsByClassName('allow-recursive')[0].checked;
+                if (showCloseButton === SHOW_COLLAPSE_BUTTON && allowRecursive === ALLOW_RECURSIVE) { return; }
+                localStorage.setItem('func-planner-show-collapse-button', showCloseButton ? 'true' : 'false');
+                localStorage.setItem('func-planner-allow-recursive', allowRecursive ? 'true' : 'false');
+                location.reload(); // reload to apply settings
+            }
+        });
     });
 }
 function makeInfoBox(diagram, min_funcs = 1, min_testable = 0) {
@@ -1506,7 +1583,7 @@ function exportToPython(diagram, withTypes=true) {
     copyToClipboard(text);
     Swal.fire({
         theme: diagram.themeManager.currentTheme,
-        imageUrl: 'python.svg',
+        imageUrl: 'images/python.svg',
         imageWidth: "6em",
         title: "Python Template Copied",
         html: "Python template copied to clipboard.<br>Paste it into a Python file.<br>" +
@@ -1529,7 +1606,7 @@ function exportPythonTests(diagram) {
     copyToClipboard(text);
     Swal.fire({
         theme: diagram.themeManager.currentTheme,
-        imageUrl: 'unit-tests.svg',
+        imageUrl: 'images/unit-tests.svg',
         imageWidth: "6em",
         title: "Python Unit Tests Copied",
         html: "Python unit tests copied to clipboard.<br>Paste it into a Python file that ends with <code>_test.py</code>.<br>" +
@@ -1591,7 +1668,7 @@ function saveJSON(diagram, includeProblems=false) {
     copyToClipboard(json);
     Swal.fire({
         theme: diagram.themeManager.currentTheme,
-        imageUrl: 'save.svg',
+        imageUrl: 'images/save.svg',
         imageWidth: "6em",
         title: "JSON Copied",
         html: "JSON version copied to clipboard.<br>Save to a file so it can be reloaded later.<br>" +

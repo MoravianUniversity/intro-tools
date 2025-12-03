@@ -141,9 +141,21 @@ div:where(.swal2-container) img:where(.swal2-image) { margin: 2em auto 0 !import
     position: absolute;
     bottom: 10px; left: 10px;
     z-index: 100;
-    font-size: 1.8em; margin: 0;
+    font-size: 1.5em; margin: 0;
     svg { color: var(--text-color); }
 }
+.func-planner .func-planner-settings-button {
+    position: absolute;
+    cursor: pointer;
+    bottom: calc(15px + 1.5rem); left: 9px;
+    z-index: 100;
+    font-size: 1.5em; margin: 0;
+    svg {
+        color: var(--text-color); fill: var(--text-color);
+        width: 1.125em; height: 1.125em;
+    }
+}
+
 
 .func-planner ul.problems {
     padding-left: 1.3em;
@@ -316,7 +328,7 @@ div:where(.swal2-container) img:where(.swal2-image) { margin: 2em auto 0 !import
             cursor: ns-resize;
             z-index: 120;
         }
-        .func-var:hover .func-var-drag-handle { background: url("drag-dots.svg") center/0.8em no-repeat; }
+        .func-var:hover .func-var-drag-handle { background: url("images/drag-dots.svg") center/0.8em no-repeat; }
     }
 
     label { display: block; }

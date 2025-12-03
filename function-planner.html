@@ -23,9 +23,12 @@
     <link rel="stylesheet" href="https://unpkg.com/sweetalert2@11.22.0/dist/sweetalert2.min.css">
     <script type="module">
     import init from "./function-planner.js";
-    const planId = "default";
     window.addEventListener('DOMContentLoaded', () => {
-        init('planner', null, planId, null, ['int', 'float', 'str', 'bool', 'list', 'tuple', 'dict', 'set', 'custom'], 0, 0);
+        init('planner', "default", {
+            // allowedTypes: ['int', 'float', 'str', 'bool', 'list', 'tuple', 'dict', 'set', 'custom'],
+            // minFunctions: 0,
+            // minTestable: 0
+        });
     });
     </script>
 </head>
