@@ -282,8 +282,10 @@ div:where(.swal2-container) img:where(.swal2-image) { margin: 2em auto 0 !import
             text-align: center;
             vertical-align: bottom;
         }
-        .func-var-type:has(option[value*=" "]:checked):not(:disabled) { max-width: calc(100% - 1.575em - 0.2em); }
-        .func-var-type:has(option[value*=" "]:checked):not(:disabled) + .func-var-type-edit { display: inline-block; }
+        .func-var-type:has(option[value*=" "]:checked):not(:disabled),
+        .func-var-type:has(option[data-custom-type]:checked):not(:disabled) { max-width: calc(100% - 1.575em - 0.2em); }
+        .func-var-type:has(option[value*=" "]:checked):not(:disabled) + .func-var-type-edit,
+        .func-var-type:has(option[data-custom-type]:checked):not(:disabled) + .func-var-type-edit { display: inline-block; }
 
         /* Add and Remove Buttons */
         .func-var-button {
@@ -343,10 +345,12 @@ div:where(.swal2-container) img:where(.swal2-image) { margin: 2em auto 0 !import
 }
 .type-editor {
     .type-container { display: inline-block; margin: 5px 0; }
-    select { margin: 0 2px; padding: 2px; }
+    select, .custom-type-input { margin: 0 2px; padding: 2px; }
     button { cursor: pointer; }
     button:disabled { color: gray; cursor: not-allowed; opacity: 0.5; }
     select:first-child { margin-left: 0; }
+    select:has(option[value=""]:checked) { color: #666; font-style: italic; }
+    .custom-type-input { font-family: inherit; }
     .mode-select { margin: 0 5px; }
     .connector { margin: 0 2px; }
     .indented-nested { display: block; margin-left: 30px; }

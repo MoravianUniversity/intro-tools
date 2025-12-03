@@ -50,6 +50,7 @@ export default function init(
         allowDelete: true,
         initialAutoScale: go.AutoScale.Uniform,
         defaultScale: 1.5,
+        padding: 125,
         maxSelectionCount: 1,
         layout: new go.LayeredDigraphLayout({ direction: 90, /*layerSpacing: 25,*/ columnSpacing: 30, }),
         'undoManager.isEnabled': true,
@@ -719,8 +720,8 @@ function addNameElement(elem, value, callback, locked=false) {
     name.value = value || '';
     elem.appendChild(name);
 }
-function isContainerType(type) {
-    return type.startsWith("list") || type.startsWith("tuple") || type.startsWith("dict") || type.startsWith("set");
+function isSpecialType(type) {
+    return type.startsWith("list") || type.startsWith("tuple") || type.startsWith("dict") || type.startsWith("set") || type.endsWith("custom");
 }
 function removeCustomTypeOption(select) {
     const options = select.options;
@@ -730,6 +731,7 @@ function addCustomTypeOption(select, type) {
     removeCustomTypeOption(select);
     const opt = makeOption(type, type);
     opt.customType = true;
+    opt.setAttribute("data-custom-type", "true");
     select.options.add(opt);
     select.value = type;
 }
@@ -740,7 +742,7 @@ function addTypeElement(diagram, elem, value, callback, locked=false) {
 
     const type = document.createElement("select");
     type.addEventListener("change", async () => {
-        if (isContainerType(type.value)) {
+        if (isSpecialType(type.value)) {
             const result = await showTypeBuilder(diagram, type.value);
             if (result === null) { type.value = type.lastSelected; return; }
             addCustomTypeOption(type, result);
@@ -822,7 +824,12 @@ async function showTypeBuilder(diagram, initialType) {
         willOpen: (popup) => {
             const content = popup.querySelector('.func-planner-type-builder');
             function onChange(value) {
-                if (!value.includes('?')) { result = value; }
+                if (!value.includes('?')) {
+                    result = value;
+                    Swal.getConfirmButton().disabled = false;
+                } else {
+                    Swal.getConfirmButton().disabled = true;
+                }
             }
             const editor = new TypeEditor(content, {
                 onChange, allowedTypes: diagram.allowedTypes, initialType: initialType.trim()

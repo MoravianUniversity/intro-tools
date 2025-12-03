@@ -167,6 +167,41 @@ class TypeEditor {
     }
     
     /**
+     * Checks if the current type is valid (no placeholders selected)
+     * 
+     * Returns true if all type dropdowns have valid types selected,
+     * false if any dropdown has the placeholder "type" option selected.
+     * 
+     * @returns {boolean} True if the type is valid, false if any placeholder is selected
+     * 
+     * @example
+     * if (editor.isValid()) {
+     *     const typeString = editor.getTypeString();
+     *     console.log('Valid type:', typeString);
+     * } else {
+     *     console.log('Please select all types');
+     * }
+     */
+    isValid() {
+        const allSelects = this.#element.querySelectorAll('.type-container select');
+        for (const select of allSelects) {
+            if (!select.value || select.value === '') {
+                return false;
+            }
+            
+            // If custom is selected, check that the input has a valid custom type name
+            if (select.value === 'custom') {
+                const container = select.closest('.type-container');
+                const customInput = container.querySelector('.custom-type-input');
+                if (!customInput || !this.#isValidCustomTypeName(customInput.value)) {
+                    return false;
+                }
+            }
+        }
+        return true;
+    }
+    
+    /**
      * Parses and sets the editor from a type string
      * 
      * Parses an English type string and rebuilds the editor to match.
@@ -228,15 +263,15 @@ class TypeEditor {
      * Clears the editor and resets to initial state
      * 
      * Removes all type selections and resets the editor to show
-     * a single type dropdown. Triggers the onChange callback if set.
+     * a single type dropdown with placeholder selected. Triggers the onChange callback if set.
      * 
      * @example
      * editor.clear();
      * 
      * @example
-     * // Clear and get the default type
+     * // Clear and check type string
      * editor.clear();
-     * console.log(editor.getTypeString()); // "int" (default first type)
+     * console.log(editor.getTypeString()); // "?" (placeholder selected, no type chosen)
      */
     clear() {
         this.#element.innerHTML = '';
@@ -249,6 +284,21 @@ class TypeEditor {
         if (this.#onChangeCallback) {
             this.#onChangeCallback(this.getTypeString());
         }
+    }
+
+    // Private: Check if a string is a valid custom type name
+    #isValidCustomTypeName(name) {
+        if (!name || typeof name !== 'string') {
+            return false;
+        }
+        const trimmed = name.trim();
+        // Must match identifier pattern: [a-zA-Z][a-zA-Z0-9_]*
+        const identifierPattern = /^[a-zA-Z][a-zA-Z0-9_]*$/;
+        if (!identifierPattern.test(trimmed)) {
+            return false;
+        }
+        // Must not be in allTypes (not a built-in type)
+        return !this.#allTypes.includes(trimmed);
     }
 
     // Private: Check if we need immutable types only (inside set or dict keys)
@@ -297,6 +347,12 @@ class TypeEditor {
 
         const select = document.createElement('select');
 
+        // Add placeholder option first
+        const placeholderOption = document.createElement('option');
+        placeholderOption.value = '';
+        placeholderOption.textContent = 'type';
+        select.appendChild(placeholderOption);
+
         // Determine which types to show based on context
         const inSetContext = this.#isInsideSet(parent);
         const immutableTypes = [...this.#baseTypes, 'tuple'];
@@ -310,16 +366,23 @@ class TypeEditor {
             select.appendChild(option);
         });
 
-        // Default to first option
+        // Default to placeholder (empty value)
         select.selectedIndex = 0;
 
-        select.addEventListener('change', (e) => this.#handleTypeChange(e, container, id));
+        select.addEventListener('change', (e) => {
+            // Only handle change if a valid type is selected
+            if (e.target.value) {
+                this.#handleTypeChange(e, container, id);
+            } else {
+                // Clear nested elements if placeholder is selected
+                const childElements = container.querySelectorAll('.type-container:not(:first-child), .mode-select, .connector, .add-type-btn, .remove-type-btn, .indented-nested, .dict-label, .dict-connector');
+                childElements.forEach(el => el.remove());
+                this.#notifyChange();
+            }
+        });
         
         container.appendChild(select);
         parent.appendChild(container);
-        
-        // Trigger initial change to set up nested elements if needed
-        this.#handleTypeChange({ target: select }, container, id);
         
         return container;
     }
@@ -328,10 +391,12 @@ class TypeEditor {
         const selectedType = event.target.value;
         
         // Remove any existing nested elements
-        const childElements = container.querySelectorAll('.type-container:not(:first-child), .mode-select, .connector, .add-type-btn, .remove-type-btn, .indented-nested, .dict-label, .dict-connector');
+        const childElements = container.querySelectorAll('.type-container:not(:first-child), .mode-select, .connector, .add-type-btn, .remove-type-btn, .indented-nested, .dict-label, .dict-connector, .custom-type-input');
         childElements.forEach(el => el.remove());
 
-        if (this.#containerTypes.includes(selectedType)) {
+        if (selectedType === 'custom') {
+            this.#addCustomInput(container);
+        } else if (this.#containerTypes.includes(selectedType)) {
             if (selectedType === 'list') {
                 this.#addContainerInterface(container, 'of'); // List defaults to 'of'
             } else if (selectedType === 'set') {
@@ -344,6 +409,17 @@ class TypeEditor {
         }
         
         this.#notifyChange();
+    }
+    
+    #addCustomInput(container) {
+        const input = document.createElement('input');
+        input.type = 'text';
+        input.className = 'custom-type-input';
+        input.placeholder = 'Enter custom type';
+        input.addEventListener('input', () => {
+            this.#notifyChange();
+        });
+        container.appendChild(input);
     }
 
     #addSetInterface(container) {
@@ -532,6 +608,14 @@ class TypeEditor {
             return '?';
         }
 
+        if (selectedType === 'custom') {
+            const customInput = container.querySelector('.custom-type-input');
+            if (customInput && this.#isValidCustomTypeName(customInput.value)) {
+                return customInput.value.trim();
+            }
+            return '?';
+        }
+
         if (this.#baseTypes.includes(selectedType)) {
             return selectedType;
         }
@@ -634,25 +718,25 @@ class TypeEditor {
                 return {
                     type: 'list',
                     mode: 'of',
-                    nested: { type: defaultBaseType }
+                    nested: { type: '' }
                 };
             } else if (typeStr === 'tuple') {
                 return {
                     type: 'tuple',
                     mode: 'with',
-                    types: [{ type: defaultBaseType }]
+                    types: [{ type: '' }]
                 };
             } else if (typeStr === 'set') {
                 return {
                     type: 'set',
                     mode: 'of',
-                    nested: { type: defaultBaseType }
+                    nested: { type: '' }
                 };
             } else if (typeStr === 'dict') {
                 return {
                     type: 'dict',
-                    keyType: { type: defaultBaseType },
-                    valueType: { type: defaultBaseType }
+                    keyType: { type: '' },
+                    valueType: { type: '' }
                 };
             }
         }
@@ -785,6 +869,15 @@ class TypeEditor {
             }
         }
         
+        // Check if it's a custom type (valid identifier, not a built-in type)
+        // Only if "custom" is in allowedTypes
+        if (this.#allTypes.includes('custom') && (this.#isValidCustomTypeName(typeStr) || typeStr === 'custom')) {
+            return {
+                type: 'custom',
+                customValue: typeStr === 'custom' ? '' : typeStr.trim()
+            };
+        }
+        
         throw new Error(`Unable to parse type: ${typeStr}`);
     }
 
@@ -875,6 +968,12 @@ class TypeEditor {
 
         const select = document.createElement('select');
         
+        // Add placeholder option first
+        const placeholderOption = document.createElement('option');
+        placeholderOption.value = '';
+        placeholderOption.textContent = 'type';
+        select.appendChild(placeholderOption);
+        
         // Determine which types to show based on context
         const inSetContext = this.#isInsideSet(parentElement);
         const immutableTypes = [...this.#baseTypes, 'tuple'];
@@ -890,13 +989,31 @@ class TypeEditor {
         select.value = parsed.type;
         
         // Add change event listener so dropdowns work after parsing
-        select.addEventListener('change', (e) => this.#handleTypeChange(e, container, id));
+        select.addEventListener('change', (e) => {
+            // Only handle change if a valid type is selected
+            if (e.target.value) {
+                this.#handleTypeChange(e, container, id);
+            } else {
+                // Clear nested elements if placeholder is selected
+                const childElements = container.querySelectorAll('.type-container:not(:first-child), .mode-select, .connector, .add-type-btn, .remove-type-btn, .indented-nested, .dict-label, .dict-connector, .custom-type-input');
+                childElements.forEach(el => el.remove());
+                this.#notifyChange();
+            }
+        });
         
         container.appendChild(select);
         parentElement.appendChild(container);
 
+        // Handle custom type
+        if (parsed.type === 'custom') {
+            this.#addCustomInput(container);
+            const customInput = container.querySelector('.custom-type-input');
+            if (customInput && parsed.customValue) {
+                customInput.value = parsed.customValue;
+            }
+        }
         // Handle container-specific setup
-        if (parsed.type === 'set') {
+        else if (parsed.type === 'set') {
             const connector = document.createElement('span');
             connector.className = 'connector';
             connector.textContent = 'of';
