@@ -2,17 +2,16 @@
  * This file contains the code for the function planner tool.
  * 
  * Future ideas:
+ *  - in dark mode, lots of the function inspector text is hard to read (especially when errors/defaults)
  *  - better display of the first line of the function (make it look like Python, text boxes that auto-resize)
- *  - more init options for what should be tested or in the menu
- *       - general:
- *            - plan name
- *            - author names
- *            - module (& test module) documentation (should be able to see and edit if not read-only)
- *            - global code (imports, constants, etc) (should be able to see and edit if not read-only)
- *            - min length of documentation strings
- *       - per-function:
- *            - test code (should be able to see and edit if not read-only)
- *       - some model settings propagate into in-progress model without resetting? (i.e. new functions, into read-only functions, etc)
+ *  - be able to see and edit (if not readonly)
+ *      - plan name (always readonly?)
+ *      - author names (always editable? or use logged-in user?)
+ *      - module & test documentation
+ *      - global code (imports, constants, etc)
+ *  - be able to see, export, and edit (if not read-only) per-function:
+ *      - test code
+ *  - some model settings propagate into in-progress model without resetting? (i.e. new functions, into read-only functions, etc)
  *  - a few less parentheses in the type editor string generation
  *  - server side saving and loading of plans, collaboration, instructor side of things
  */
@@ -25,7 +24,14 @@
 import { AvoidsLinksRouter } from './AvoidsLinksRouter.js';
 import TypeEditor from './type-editor.js';
 
-const BASIC_PLAN = { functions: [{ key: 1, name: 'main' },], calls: [] };
+const BASIC_MODEL = {
+    documentation: 'TODO: program header',
+    testDocumentation: '',  // defaults to "Tests for the [planId] module"
+    globalCode: '',
+    readOnly: false,
+    functions: [{ key: 1, name: 'main' },],
+    calls: []
+};
 const DEFAULT_ALLOWED_TYPES = ['int', 'float', 'str', 'bool', 'list', 'tuple', 'dict', 'set'];
 
 // Settings
@@ -42,6 +48,10 @@ const ALLOW_RECURSIVE = localStorage.getItem('func-planner-allow-recursive') ===
  * @param {string[]} options.allowedTypes - List of allowed types for function parameters and returns
  * @param {number} options.minFunctions - Minimum number of functions required (for validation), defaults to 1
  * @param {number} options.minTestable - Minimum number of testable functions required (for validation), defaults to 0
+ * @param {number} options.minModuleDescLength - Minimum length of module description (for validation), defaults to 25
+ * @param {number} options.minFuncDescLength - Minimum length of function description (for validation), defaults to 20
+ * @param {number} options.minParamDescLength - Minimum length of parameter description (for validation), defaults to 10
+ * @param {number} options.minReturnDescLength - Minimum length of return description (for validation), defaults to 10
  */
 export default function init(
     rootElem,
@@ -55,7 +65,11 @@ export default function init(
         initialModel,
         allowedTypes,
         minFunctions=1,
-        minTestable=0
+        minTestable=0,
+        minModuleDescLength=25,
+        minFuncDescLength=20,
+        minParamDescLength=10,
+        minReturnDescLength=10,
     } = options;
 
     rootElem.classList.add("func-planner");
@@ -79,7 +93,17 @@ export default function init(
     });
     diagram.planId = planId;
     diagram.allowedTypes = allowedTypes || DEFAULT_ALLOWED_TYPES;
-    diagram.initialModel = initialModel || BASIC_PLAN;
+    diagram.initialModel = initialModel || BASIC_MODEL;
+    diagram.documentation = diagram.initialModel.documentation || 'TODO: program header';
+    diagram.testDocumentation = diagram.initialModel.testDocumentation || '';
+    diagram.globalCode = diagram.initialModel.globalCode || '';
+    diagram.readOnly = diagram.initialModel.readOnly || false;
+    diagram.minFunctions = minFunctions;
+    diagram.minTestable = minTestable;
+    diagram.minModuleDescLength = minModuleDescLength;
+    diagram.minFuncDescLength = minFuncDescLength;
+    diagram.minParamDescLength = minParamDescLength;
+    diagram.minReturnDescLength = minReturnDescLength;
 
     diagram.themeManager.set('light', {
         colors: {
@@ -252,6 +276,7 @@ export default function init(
     }
     makeSettingsButton(diagram);
     makeThemeToggle(diagram);
+    makeInstructionsButton(diagram);
     makeButtons(diagram);
     makeInfoBox(diagram, minFunctions, minTestable);
     setupFunctionInspector(diagram);
@@ -340,31 +365,6 @@ function createToolTip(rootElem) {
     });
 }
 
-const INSTRUCTIONS = `
-<div class="func-planner-instructions">
-<h2>Function Planner</h2>
-<p>The diagram shows the functions and who they call. Clicking on a function
-will show its details on the right and allow you to edit it.</p>
-<p>As you edit the functions, the diagram will update to show any problems.
-Errors are shown with a <span class="stroke-error">red</span> outline and less
-serious warnings with a <span class="stroke-warning">yellow</span> outline.</p>
-<p>The color of a function indicates its user I/O type:</p>
-<ul>
-    <li><span class="bg-testable">Testable</span> - can be tested with a test case</li>
-    <li><span class="bg-validation">Validated Input</span> - has user input with validation</li>
-    <li><span class="bg-input">Basic Input</span> - has basic user input</li>
-    <li><span class="bg-output">Output Only</span> - has user output but no direct user input</li>
-    <li><span class="bg-none">None / Indirect</span> - no user I/O itself, but may call functions which do</li>
-</ul>
-<p>The buttons on the left allow you to add functions, generate a Python
-template, save the diagram, and other actions.</p>
-<p>To add a new function call, drag from the edge of one function to another.
-They can be reconnected as needed. Double-clicking a call will reverse its
-direction.</p>
-<p>To remove functions or calls, select them and press the delete key.</p>
-</div>
-`
-
 function setupFunctionInspector(diagram) {
     const diagramDiv = diagram.div;
     const rootElem = diagramDiv.parentNode;
@@ -375,7 +375,7 @@ function setupFunctionInspector(diagram) {
 
     const inspectorDiv = document.createElement('div');
     inspectorDiv.className = 'inspector';
-    inspectorDiv.innerHTML = INSTRUCTIONS;
+    inspectorDiv.innerHTML = 'TODO';
     rootElem.appendChild(inspectorDiv);
 
     const width = rootElem.clientWidth;
@@ -418,7 +418,7 @@ function setupFunctionInspector(diagram) {
 
     function inspectObject(node) {
         inspectorDiv.innerHTML = '';
-        if (!node) { inspectorDiv.innerHTML = INSTRUCTIONS; return; }
+        if (!node) { inspectorDiv.innerHTML = 'TODO'; return; }
         const problemsDiv = document.createElement('div');
         problemsDiv.className = 'problems';
         const data = node.data;
@@ -518,7 +518,7 @@ function setupFunctionInspector(diagram) {
         if (subject instanceof go.Link) {
             return; // keep same
             //subject = subject.fromNode; // show the fromNode of the link
-            //inspectorDiv.innerHTML = INSTRUCTIONS; // show help
+            //inspectorDiv.innerHTML = 'TODO';
         }
         inspectObject(subject);
     });
@@ -819,13 +819,7 @@ function addVarButton(elem, name, callback, locked=false) {
     const button = document.createElement("div");
     button.className = "func-var-button func-var-button-" + name;
     button.addEventListener("click", callback);
-    fetch(`images/${name}.svg`)
-        .then(response => response.text())
-        .then(svg => { button.innerHTML = svg; })
-        .catch(err => {
-            console.error(`Error loading images/${name}.svg:`, err);
-            button.textContent = name === "remove" ? "x" : "+"; // fallback text
-        });
+    loadSVG(`images/${name}.svg`, button, name === "remove" ? "x" : "+");
     elem.appendChild(button);
 }
 function addAddButton(elem, createFunc, locked=false) {
@@ -924,10 +918,7 @@ function addButton(holder, icon, classes, name, callback) {
     let img;
     if (icon.toLowerCase().endsWith('.svg')) {
         img = document.createElement('div');
-        fetch(`images/${icon}`)
-            .then(response => response.text())
-            .then(svg => { img.innerHTML = svg; })
-            .catch(err => console.error("Error loading icon:", err));
+        loadSVG(`images/${icon}`, img, "");
     } else {
         img = document.createElement('img');
         img.src = `images/${icon}`;
@@ -950,7 +941,7 @@ function makeThemeToggle(diagram) {
 
     const checked = localStorage.getItem('func-planner-theme') === 'dark';
     const button = htmlToNode(`
-<label class="theme-toggle" title="Toggle theme">
+<label class="func-planner-fab theme-toggle" title="Toggle theme">
   <input type="checkbox" ${checked ? 'checked' : ''} />
   <span class="theme-toggle-sr">Toggle theme</span>
   <svg xmlns="http://www.w3.org/2000/svg" aria-hidden="true" class="theme-toggle__within" height="1em" width="1em" viewBox="0 0 32 32" fill="currentColor">
@@ -980,12 +971,9 @@ function makeThemeToggle(diagram) {
 }
 function makeSettingsButton(diagram) {
     const button = document.createElement('div');
-    button.className = 'func-planner-settings-button no-outline';
+    button.className = 'func-planner-fab func-planner-settings-button';
     button.title = 'Settings';
-    fetch('images/settings.svg')
-        .then(response => response.text())
-        .then(svg => { button.innerHTML = svg; })
-        .catch(err => { console.error('Error loading images/settings.svg:', err); });
+    loadSVG('images/settings.svg', button, "⚙️");
     diagram.div.parentNode.appendChild(button);
 
     button.addEventListener('click', () => {
@@ -1009,6 +997,33 @@ function makeSettingsButton(diagram) {
             }
         });
     });
+}
+function makeInstructionsButton(diagram) {
+    const button = document.createElement('div');
+    button.className = 'func-planner-fab func-planner-instructions-button';
+    button.title = 'Instructions';
+    loadSVG('images/help.svg', button, "ℹ️");
+    diagram.div.parentNode.appendChild(button);
+    diagram.div.parentNode.appendChild(htmlToNode(`<div class="func-planner-instructions"><h2>Instructions</h2>
+<p>The diagram shows the functions and who they call. Clicking on a function
+will show its details on the right and allow you to edit it.</p>
+<p>As you edit the functions, the diagram will update to show any problems.
+Errors are shown with a <span class="stroke-error">red</span> outline and less
+serious warnings with a <span class="stroke-warning">yellow</span> outline.</p>
+<p>The color of a function indicates its user I/O type:</p>
+<ul>
+    <li><span class="bg-testable">Testable</span> - can be tested with a test case</li>
+    <li><span class="bg-validation">Validated Input</span> - has user input with validation</li>
+    <li><span class="bg-input">Basic Input</span> - has basic user input</li>
+    <li><span class="bg-output">Output Only</span> - has user output but no direct user input</li>
+    <li><span class="bg-none">None / Indirect</span> - no user I/O itself, but may call functions which do</li>
+</ul>
+<p>The buttons on the left allow you to add functions, generate a Python
+template, save the diagram, and other actions.</p>
+<p>To add a new function call, drag from the edge of one function to another.
+They can be reconnected as needed. Double-clicking a call will reverse its
+direction.</p>
+<p>To remove functions or calls, select them and press the delete key.</p></div>`));
 }
 function makeInfoBox(diagram, min_funcs = 1, min_testable = 0) {
     const infoBox = document.createElement('div');
@@ -1297,7 +1312,7 @@ function funcProblems(data, diagram, fix=false) {
         }
     } else {
         if (desc.length === 0) { problems.push(["warning", "desc", "Function description is required."]); }
-        else if (desc.length < 20) { problems.push(["warning", "desc", "Function description is too short - be more descriptive!"]); }
+        else if (desc.length < (diagram.minFuncDescLength || 20)) { problems.push(["warning", "desc", "Function description is too short - be more descriptive!"]); }
         // if (params.length === 0 && returns.length === 0 && io !== 'output') {
         //     problems.push(["error", "params,returns", "Non-main functions should have at least one parameter or return value, or be output only."]);
         // }
@@ -1314,13 +1329,13 @@ function funcProblems(data, diagram, fix=false) {
             names.push(param.name);
             if (!param.type) { problems.push(["error", `params[${i}].type`, "Parameter type is required."]); }
             if (!param.desc) { problems.push(["error", `params[${i}].desc`, "Parameter description is required."]); }
-            else if (param.desc.length < 10) { problems.push(["warning", `params[${i}].desc`, "Parameter description is too short - be more descriptive!"]); }
+            else if (param.desc.length < (diagram.minParamDescLength || 20)) { problems.push(["warning", `params[${i}].desc`, "Parameter description is too short - be more descriptive!"]); }
         }
         for (let i = 0; i < returns.length; i++) {
             const ret = returns[i];
             if (!ret.type) { problems.push(["error", `returns[${i}].type`, "Return value type is required."]); }
             if (!ret.desc) { problems.push(["error", `returns[${i}].desc`, "Return value description is required."]); }
-            else if (ret.desc.length < 10) { problems.push(["warning", `returns[${i}].desc`, "Return value description is too short - be more descriptive!"]); }
+            else if (ret.desc.length < (diagram.minReturnDescLength || 20)) { problems.push(["warning", `returns[${i}].desc`, "Return value description is too short - be more descriptive!"]); }
         }
     }
 
@@ -1339,6 +1354,14 @@ function deepEquals(a, b) {
     return Object.keys(a).every(key => (key in b) && deepEquals(a[key], b[key]));
 }
 function dup(obj) { return JSON.parse(JSON.stringify(obj)); }
+function loadSVG(path, elem, fallback='') {
+    fetch(path).then(response => response.text())
+        .then(svg => { elem.innerHTML = svg; })
+        .catch(err => {
+            console.error(`Error loading SVG from ${path}:`, err);
+            elem.textContent = fallback;
+        });
+}
 function escapeHtml(unsafe) {
   return unsafe
     .replace(/&/g, "&amp;")
@@ -1533,7 +1556,8 @@ function pythonDocstring(desc, params, returns) {
     return docstring;
 }
 function generatePythonTemplate(diagram, withTypes=true) {
-    let text = '"""\nTODO: program header\n\nBy:\n"""\n\n';
+    let text = `"""\n${diagram.documentation || "TODO: program header"}\n\nBy:\n"""\n\n`;
+    if (diagram.globalCode) { text += `${diagram.globalCode}\n\n`; }
     let mainFunc = null;
     // TODO: sort?
     for (const func of diagram.model.nodeDataArray) {
@@ -1592,7 +1616,7 @@ function exportToPython(diagram, withTypes=true) {
     });
 }
 function generatePythonTests(diagram) {
-    let text = '"""\nTODO: test header\n\nBy:\n"""\n\nimport pytest\n\nimport ' + diagram.planId + '\n\n';
+    let text = `"""\n${diagram.testDocumentation || "Tests for the " + diagram.planId + " module"}\n\nBy:\n"""\n\nimport pytest\n\nimport ` + diagram.planId + `\n\n`;
     for (const func of diagram.model.nodeDataArray) {
         if (func.testable) {
             text += `def test_${func.name}():\n    # TODO: write tests\n    pass\n\n`;

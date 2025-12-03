@@ -137,25 +137,64 @@ div:where(.swal2-container) img:where(.swal2-image) { margin: 2em auto 0 !import
 }
 .func-planner .info-box:not(:has(table tr:not(.value-hidden))):not(:has(> span:not(.value-hidden))) { display: none; }
 
-.func-planner label.theme-toggle {
-    position: absolute;
-    bottom: 10px; left: 10px;
-    z-index: 100;
-    font-size: 1.5em; margin: 0;
-    svg { color: var(--text-color); }
-}
-.func-planner .func-planner-settings-button {
+.func-planner .func-planner-fab {
     position: absolute;
     cursor: pointer;
-    bottom: calc(15px + 1.5rem); left: 9px;
     z-index: 100;
     font-size: 1.5em; margin: 0;
-    svg {
-        color: var(--text-color); fill: var(--text-color);
-        width: 1.125em; height: 1.125em;
-    }
+    svg { color: var(--text-color); fill: var(--text-color); }
 }
+.func-planner label.theme-toggle {
+    bottom: 10px; left: 10px;
+}
+.func-planner .func-planner-settings-button {
+    bottom: calc(15px + 1.5rem); left: 9px;
+    svg { width: 1.125em; height: 1.125em; }
+}
+.func-planner .func-planner-instructions-button {
+    bottom: 10px; left: calc(15px + 1.5rem);
+    z-index: 100;
+    svg { width: 0.85em; height: 0.85em; border: 1px solid var(--text-color); border-radius: 50%; background-color: #0000ff; }
+}
+.func-planner .func-planner-instructions-button:hover + .func-planner-instructions,
+.func-planner .func-planner-instructions:hover { display: block; }
+.func-planner .func-planner-instructions {
+    display: none;
+    bottom: 15px; left: calc(15px + 1.5rem);
+    position: absolute;
+    z-index: 1000;
+    background-color: var(--tool-background-color);
+    padding: 1em;
+    border: 1px solid var(--stroke-color);
+    border-radius: 0.5em;
+    box-shadow: 0 0 0.5em var(--shadow-color);
+    max-width: 450px; max-height: 300px;
+    overflow: auto;
+    h2 { font-size: 1.18em; margin: 0; border-bottom: 2px solid var(--text-color); margin: 0; }
+    .stroke-error, .stroke-warning {
+        display: inline-block;
+        outline: 2px solid transparent;
+        border-radius: 5px;
+        padding: 0.1em 0.25em;
+    }
+    .stroke-error { outline-color: var(--error-color); }
+    .stroke-warning { outline-color: var(--warning-color); }
 
+    ul { padding-left: 1em; margin: 0; }
+    .bg-testable, .bg-validation, .bg-input, .bg-output, .bg-indirect, .bg-none {
+        display: inline-block;
+        border: 2px solid var(--stroke-color);
+        border-radius: 5px;
+        padding: 0.1em 0.25em;
+        margin-top: 0.1em;
+    }
+    .bg-testable { background: var(--bg-testable-color); }
+    .bg-validation { background: var(--bg-validation-color); }
+    .bg-input { background: var(--bg-input-color); }
+    .bg-output { background: var(--bg-output-color); }
+    .bg-indirect { background: var(--bg-indirect-color); }
+    .bg-none { background: var(--bg-none-color); }
+}
 
 .func-planner ul.problems {
     padding-left: 1.3em;
@@ -209,31 +248,6 @@ div:where(.swal2-container) img:where(.swal2-image) { margin: 2em auto 0 !import
     background-color: var(--button-color);
     box-shadow: 0 0 1em var(--shadow-color);
 }
-.func-planner .func-planner-instructions {
-    .stroke-error, .stroke-warning {
-        display: inline-block;
-        outline: 2px solid transparent;
-        border-radius: 5px;
-        padding: 0.1em 0.25em;
-    }
-    .stroke-error { outline-color: var(--error-color); }
-    .stroke-warning { outline-color: var(--warning-color); }
-
-    ul { padding-left: 1em; margin: 0; }
-    .bg-testable, .bg-validation, .bg-input, .bg-output, .bg-indirect, .bg-none {
-        display: inline-block;
-        border: 2px solid var(--stroke-color);
-        border-radius: 5px;
-        padding: 0.1em 0.25em;
-        margin-top: 0.1em;
-    }
-    .bg-testable { background: var(--bg-testable-color); }
-    .bg-validation { background: var(--bg-validation-color); }
-    .bg-input { background: var(--bg-input-color); }
-    .bg-output { background: var(--bg-output-color); }
-    .bg-indirect { background: var(--bg-indirect-color); }
-    .bg-none { background: var(--bg-none-color); }
-}
 .func-planner .inspector {
     position: absolute;
     top: 0; bottom: 0; right: 0;
@@ -244,7 +258,7 @@ div:where(.swal2-container) img:where(.swal2-image) { margin: 2em auto 0 !import
 
     h2 { font-size: 1.18em; margin: 0; border-bottom: 2px solid var(--text-color); margin: 0; }
     h3 { font-size: 1.1em; margin-bottom: 0; }
-    input.func-name { font-family: monospace; font-size: 1.18em; width: 100%; background-color: transparent; border: 1px solid transparent; }
+    input.func-name { font-family: monospace; font-size: 1.18em; width: 100%; background-color: transparent; border: 1px solid transparent; color: var(--text-color); }
     textarea { width: 100%; min-height: 3.75em; resize: vertical; }
     input:read-only, textarea:read-only { background-color: transparent; border: 1px solid transparent; }
 
