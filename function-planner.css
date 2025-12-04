@@ -154,7 +154,7 @@ div:where(.swal2-container) img:where(.swal2-image) { margin: 2em auto 0 !import
 .func-planner .func-planner-instructions-button {
     bottom: 10px; left: calc(15px + 1.5rem);
     z-index: 100;
-    svg { width: 0.85em; height: 0.85em; border: 1px solid var(--text-color); border-radius: 50%; background-color: #0000ff; }
+    svg { width: 0.85em; height: 0.85em; border: 1px solid var(--text-color); border-radius: 50%; }
 }
 .func-planner .func-planner-instructions-button:hover + .func-planner-instructions,
 .func-planner .func-planner-instructions:hover { display: block; }
