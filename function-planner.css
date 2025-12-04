@@ -74,7 +74,7 @@ div:where(.swal2-container) img:where(.swal2-image) { margin: 2em auto 0 !import
     justify-content: left;
     pointer-events: none;
 }
-.func-planner .button-holder, .func-planner .info-box {
+.func-planner .button-holder, .func-planner .func-planner-info-box {
     padding: 0.5em;
     border: 1px solid var(--stroke-color);
     border-radius: 0.5em;
@@ -125,7 +125,7 @@ div:where(.swal2-container) img:where(.swal2-image) { margin: 2em auto 0 !import
     width: 3em;
     span { display: none; }
 }
-.func-planner .info-box {
+.func-planner .func-planner-info-box {
     margin-top: 0.75em;
     .value-hidden { display: none; }
     span.value-error { color: var(--error-color); }
@@ -135,7 +135,7 @@ div:where(.swal2-container) img:where(.swal2-image) { margin: 2em auto 0 !import
     tr.value-error td:nth-child(2) { color: var(--error-color); }
     tr:not(.value-error) :is(td:nth-child(3), td:nth-child(4)) { display: none; }
 }
-.func-planner .info-box:not(:has(table tr:not(.value-hidden))):not(:has(> span:not(.value-hidden))) { display: none; }
+.func-planner .func-planner-info-box:not(:has(table tr:not(.value-hidden))):not(:has(> span:not(.value-hidden))) { display: none; }
 
 .func-planner .func-planner-fab {
     position: absolute;
