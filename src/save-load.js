@@ -35,7 +35,7 @@ export function setupSaveLoad(diagram) {
     const model = (localStorage.getItem(`${LOCAL_STORAGE_KEY_PREFIX}${diagram.planId}`)) ?
         JSON.parse(localStorage.getItem(`${LOCAL_STORAGE_KEY_PREFIX}${diagram.planId}`)) :
         dup(diagram.initialModel);
-    diagram.model = new GraphLinksModel(model.functions, model.calls);
+    rawSetModel(diagram, model);
     diagram.addModelChangedListener((e) => {
         // if (e.change === go.ChangeType.Transaction) {
         //     console.log("Transaction", e.propertyName, e.oldValue);
@@ -226,8 +226,9 @@ function pythonDocstring(desc, params, returns) {
     return docstring;
 }
 function generatePythonTemplate(diagram, withTypes=true) {
-    let text = `"""\n${diagram.documentation || DEFAULT_PROGRAM_HEADER}\n\nBy:\n"""\n\n`;
-    if (diagram.globalCode) { text += `${diagram.globalCode}\n\n`; }
+    const model = diagram.model;
+    let text = `"""\n${model.documentation || DEFAULT_PROGRAM_HEADER}\n\nBy: ${model.authors || "TODO"}\n"""\n\n`;
+    if (model.globalCode) { text += `${model.globalCode}\n\n`; }
     let mainFunc = null;
     // TODO: sort?
     for (const func of diagram.model.nodeDataArray) {
@@ -286,10 +287,13 @@ export function exportToPython(diagram, withTypes=true) {
     });
 }
 function generatePythonTests(diagram) {
-    let text = `"""\n${diagram.testDocumentation || "Tests for the " + diagram.planId + " module"}\n\nBy:\n"""\n\nimport pytest\n\nimport ` + diagram.planId + `\n\n`;
-    for (const func of diagram.model.nodeDataArray) {
+    const model = diagram.model;
+    let text = `"""\n${model.testDocumentation || "Tests for the " + diagram.planId + " module"}\n\nBy: ${model.authors || "TODO"}\n"""\n\nimport pytest\n\nimport ` + diagram.planId + `\n\n`;
+    for (const func of model.nodeDataArray) {
         if (func.testable) {
-            text += `def test_${func.name}():\n    # TODO: write tests\n    pass\n\n`;
+            text += `def test_${func.name}():\n`;
+            text += func.testCode ? indentText(func.testCode, 4) : `    # TODO: write tests for ${func.name}()\n    pass`;
+            text += `\n\n`;
         }
     }
     text += `if __name__ == '__main__':\n    pytest.main(["--no-header", "--tb=short"])\n`;
@@ -321,9 +325,19 @@ function confirmDialog(title, text, confirmFunc, theme='auto') {
         focusConfirm: false,
     }).then((confirm) => { if (confirm) { confirmFunc(); } });
 }
+function rawSetModel(diagram, model) {
+    diagram.model = new GraphLinksModel(model.functions, model.calls);
+    diagram.model.documentation = model.documentation ?? '';
+    diagram.model.testDocumentation = model.testDocumentation ?? '';
+    diagram.model.globalCode = model.globalCode ?? '';
+    diagram.model.readOnly = model.readOnly || false;
+    diagram.model.authors = model.authors ?? '';
+    if (model.showTestDocumentation) { diagram.model.showTestDocumentation = model.showTestDocumentation; }
+    if (model.showGlobalCode) { diagram.model.showGlobalCode = model.showGlobalCode; }
+}
 function setModel(diagram, model) {
     if (!model.functions || !model.calls) { return "Invalid model format. Expected 'functions' and 'calls' keys."; }
-    diagram.model = new GraphLinksModel(model.functions, model.calls);
+    rawSetModel(diagram, model);
     updateAllProblems(diagram);
 }
 function mergeModel(diagram, model) {
@@ -354,7 +368,13 @@ function getModel(diagram, includeProblems=false) {
     const model = diagram.model;
     const functions = includeProblems ? model.nodeDataArray : removeProblems(model.nodeDataArray);
     const calls = includeProblems ? model.linkDataArray : removeProblems(model.linkDataArray);
-    return { functions, calls };
+    const output = { functions, calls }
+    for (const key of ['documentation', 'testDocumentation', 'globalCode', 'readOnly', 'authors', 'showTestDocumentation', 'showGlobalCode']) {
+        if (model[key]) {
+            output[key] = model[key];
+        }
+    }
+    return output;
 }
 export function saveJSON(diagram, includeProblems=false) {
     const model = getModel(diagram, includeProblems);

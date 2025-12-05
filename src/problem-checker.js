@@ -10,7 +10,7 @@
  *  - funcIOProblemsUpdateParents(node, visited=new Set())
  *  - funcProblems(data, diagram, fix=false)
  * 
- * TODO: need to document all exported functions, what is their difference?
+ * TODO: need to document all exported functions (what is their difference?)
  */
 
 import go from 'gojs';
@@ -18,6 +18,11 @@ import go from 'gojs';
 import { deepEquals } from './utils.js';
 import { INFO_BOX_CLASS_NAME, MAIN_CHECK_CLASS_NAME, NUM_COUNT_CLASS_NAME, NUM_TESTABLE_CLASS_NAME } from './buttons.js';
 
+/**
+ * Sets up problem checking listeners on the diagram to automatically update
+ * problems when the diagram is modified.
+ * @param {*} diagram 
+ */
 export function setupProblemChecking(diagram) {
     updateAllProblems(diagram);
     function updateNodeLinkProblems(node) {
@@ -69,6 +74,10 @@ export function setupProblemChecking(diagram) {
     });
 }
 
+/**
+ * Updates all of the problems, including model, function, and link problems.
+ * @param {*} diagram 
+ */
 export function updateAllProblems(diagram) {
     const model = diagram.model;
     for (const node of diagram.nodes) {
@@ -78,38 +87,72 @@ export function updateAllProblems(diagram) {
         for (const link of node.findLinksConnected()) {
             model.setDataProperty(link.data, 'linkProblems', linkProblems(link));
         }
-        modelProblems(diagram);
-        modelLinkProblems(diagram);
     }
+    model.problems = modelProblems(diagram); // TODO: set data property?
+    modelLinkProblems(diagram); // updates problems directly
 }
 
+/**
+ * Checks the diagram model for problems about the overall model (not individual functions/links):
+ *  - presence of main function
+ *  - module documentation
+ *  - author names
+ *  - minimum number of functions
+ *  - minimum number of testable functions
+ * @param {*} diagram 
+ * @returns array of problems found: [ [severity, field, message], ... ]
+ */
 export function modelProblems(diagram) {
     const infoBox = diagram.div.parentNode.getElementsByClassName(INFO_BOX_CLASS_NAME)[0];
     const countRow = infoBox.getElementsByClassName(NUM_COUNT_CLASS_NAME)[0];
     const testableRow = infoBox.getElementsByClassName(NUM_TESTABLE_CLASS_NAME)[0];
-    const minFunctions = diagram.minFunctions || 1;
-    const minTestable = diagram.minTestable || 0;
-    
+    const minFunctions = diagram.minFunctions ?? 1;
+    const minTestable = diagram.minTestable ?? 0;
+
     const model = diagram.model;
     const nodes = model.nodeDataArray;
-    // const problems = [];
+    const problems = [];
 
     // Check for main function
-    infoBox.getElementsByClassName(MAIN_CHECK_CLASS_NAME)[0].classList.toggle('value-hidden', nodes.some(n => n.name === 'main'));
-    //if (!nodes.some(n => n.name === 'main')) { problems.push(["error", "main", "There must be a main() function."]); }
+    const hasMain = nodes.some(n => n.name === 'main');
+    infoBox.getElementsByClassName(MAIN_CHECK_CLASS_NAME)[0].classList.toggle('value-hidden', hasMain);
+    if (!hasMain) { problems.push(["error", "main", "There must be a main() function."]); }
+
+    // Check for module documentation
+    const docLen = (model.documentation || '').trim().length;
+    if (!model.documentation || docLen === 0) {
+        problems.push(["error", "documentation", "Module documentation is missing."]);
+    } else if (docLen < (diagram.minModuleDescLength ?? 25)) {
+        problems.push(["warning", "documentation", "Module documentation is too short."]);
+    }
+
+    // Check for author names
+    const authors = (model.authors || '').trim();
+    if (!model.authors || authors.length === 0) {
+        problems.push(["error", "authors", "Author name(s) are required."]);
+    } else if (authors.length < 3) {
+        problems.push(["warning", "authors", "Author name(s) seem too short."]);
+    }
 
     // Check that there are a minimum number of functions in total
     countRow.cells[1].textContent = nodes.length;
     countRow.classList.toggle('value-error', nodes.length < minFunctions);
-    //if (nodes.length < minFunctions) { problems.push(["error", "functions", `There must be at least ${minFunctions} functions.`]); }
+    if (nodes.length < minFunctions) { problems.push(["error", "functions", `There must be at least ${minFunctions} functions.`]); }
 
     // Check that there are a minimum number of testable functions
     const nTestable = nodes.filter(n => n.testable).length;
     testableRow.cells[1].textContent = nTestable;
     testableRow.classList.toggle('value-error', nTestable < minTestable);
-    //if (nTestable < minTestable) { problems.push(["error", "testable", `There must be at least ${minTestable} testable functions.`]); }
+    if (nTestable < minTestable) { problems.push(["error", "testable", `There must be at least ${minTestable} testable functions.`]); }
+
+    return problems;
 }
 
+/**
+ * Updates model-wide link problems in the call graph. Mostly checks for cycles.
+ * @param {*} diagram 
+ * @param {*} startingKey 
+ */
 function modelLinkProblems(diagram, startingKey = null) {
     // TODO: when main gets a parent that is then removed, it still thinks it's a problem until refreshed
     const model = diagram.model;
@@ -293,7 +336,7 @@ export function funcProblems(data, diagram, fix=false) {
         }
     } else {
         if (desc.length === 0) { problems.push(["warning", "desc", "Function description is required."]); }
-        else if (desc.length < (diagram.minFuncDescLength || 20)) { problems.push(["warning", "desc", "Function description is too short - be more descriptive!"]); }
+        else if (desc.length < (diagram.minFuncDescLength ?? 20)) { problems.push(["warning", "desc", "Function description is too short - be more descriptive!"]); }
         // if (params.length === 0 && returns.length === 0 && io !== 'output') {
         //     problems.push(["error", "params,returns", "Non-main functions should have at least one parameter or return value, or be output only."]);
         // }
@@ -310,13 +353,13 @@ export function funcProblems(data, diagram, fix=false) {
             names.push(param.name);
             if (!param.type) { problems.push(["error", `params[${i}].type`, "Parameter type is required."]); }
             if (!param.desc) { problems.push(["error", `params[${i}].desc`, "Parameter description is required."]); }
-            else if (param.desc.length < (diagram.minParamDescLength || 20)) { problems.push(["warning", `params[${i}].desc`, "Parameter description is too short - be more descriptive!"]); }
+            else if (param.desc.length < (diagram.minParamDescLength ?? 20)) { problems.push(["warning", `params[${i}].desc`, "Parameter description is too short - be more descriptive!"]); }
         }
         for (let i = 0; i < returns.length; i++) {
             const ret = returns[i];
             if (!ret.type) { problems.push(["error", `returns[${i}].type`, "Return value type is required."]); }
             if (!ret.desc) { problems.push(["error", `returns[${i}].desc`, "Return value description is required."]); }
-            else if (ret.desc.length < (diagram.minReturnDescLength || 20)) { problems.push(["warning", `returns[${i}].desc`, "Return value description is too short - be more descriptive!"]); }
+            else if (ret.desc.length < (diagram.minReturnDescLength ?? 20)) { problems.push(["warning", `returns[${i}].desc`, "Return value description is too short - be more descriptive!"]); }
         }
     }
 

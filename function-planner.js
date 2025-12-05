@@ -2,22 +2,15 @@
  * This file contains the code for the function planner tool.
  * 
  * Next:
- *   - Show all types on dropdowns that have been used anywhere in the plan
- *   - Show overall program settings instead of "TODO"
+ *   - Show all types on dropdowns that have been used anywhere in the plan   [in progress]
+ *   - fix issues with problems not updating correctly sometimes
  *   - Allow editing of the function names in the diagram directly
  *      https://forum.nwoods.com/t/how-to-expand-nodes-size-dynamically-when-the-text-in-its-textblock-is-being-entered/8253/17
- * 
- * 
- * Future ideas:
  *  - in dark mode, lots of the function inspector text is hard to read (especially when errors/defaults)
+ *  - in light mode, code boxes are hard to read
+ *
+ * Future ideas:
  *  - better display of the first line of the function (make it look like Python, text boxes that auto-resize)
- *  - be able to see and edit (if not readonly)
- *      - plan name (always readonly?)
- *      - author names (always editable? or use logged-in user?)
- *      - module & test documentation
- *      - global code (imports, constants, etc)
- *  - be able to see, export, and edit (if not read-only) per-function:
- *      - test code
  *  - some model settings propagate into in-progress model without resetting? (i.e. new functions, into read-only functions, etc)
  *  - a few less parentheses in the type editor string generation
  *  - server side saving and loading of plans, collaboration, instructor side of things
@@ -28,14 +21,16 @@ import go from 'gojs';
 import { AvoidsLinksRouter } from './src/AvoidsLinksRouter.js';
 
 import { makeAllButtons } from './src/buttons.js';
-import { setupSaveLoad, pythonDefLine, DEFAULT_PROGRAM_HEADER } from './src/save-load.js';
+import { setupSaveLoad, pythonDefLine } from './src/save-load.js';
 import { setupProblemChecking } from './src/problem-checker.js';
-import { setupFunctionInspector } from './src/function-inspector.js';
+import { setupInspector } from './src/inspector.js';
+import { showFunctionInspector } from './src/function-inspector.js';
+import { showModuleInspector } from './src/module-inspector.js';
 import { ALLOW_RECURSIVE, SHOW_COLLAPSE_BUTTON } from './src/settings.js';
 
 const BASIC_MODEL = {
-    documentation: DEFAULT_PROGRAM_HEADER,
-    testDocumentation: '',  // defaults to "Tests for the [planId] module"
+    documentation: '',
+    testDocumentation: '',
     globalCode: '',
     readOnly: false,
     functions: [{ key: 1, name: 'main' },],
@@ -57,6 +52,7 @@ const DEFAULT_ALLOWED_TYPES = ['int', 'float', 'str', 'bool', 'list', 'tuple', '
  * @param {number} options.minFuncDescLength - Minimum length of function description (for validation), defaults to 20
  * @param {number} options.minParamDescLength - Minimum length of parameter description (for validation), defaults to 10
  * @param {number} options.minReturnDescLength - Minimum length of return description (for validation), defaults to 10
+ * @param {boolean} options.adminMode - If true, enables admin mode features (nothing is read-only or not shown, allows editing read-only properties)
  */
 export default function init(
     rootElem,
@@ -75,6 +71,7 @@ export default function init(
         minFuncDescLength=20,
         minParamDescLength=10,
         minReturnDescLength=10,
+        adminMode=false,
     } = options;
 
     rootElem.classList.add("func-planner");
@@ -97,19 +94,17 @@ export default function init(
         'toolManager.toolTipDuration': 1e10,
     });
     diagram.planId = planId;
-    diagram.allowedTypes = allowedTypes || DEFAULT_ALLOWED_TYPES;
-    diagram.initialModel = initialModel || BASIC_MODEL;
-    diagram.documentation = diagram.initialModel.documentation || DEFAULT_PROGRAM_HEADER;
-    diagram.testDocumentation = diagram.initialModel.testDocumentation || '';
-    diagram.globalCode = diagram.initialModel.globalCode || '';
-    diagram.readOnly = diagram.initialModel.readOnly || false;
+    diagram.allowedTypes = allowedTypes ?? DEFAULT_ALLOWED_TYPES;
+    diagram.initialModel = initialModel ?? BASIC_MODEL;
     diagram.minFunctions = minFunctions;
     diagram.minTestable = minTestable;
     diagram.minModuleDescLength = minModuleDescLength;
     diagram.minFuncDescLength = minFuncDescLength;
     diagram.minParamDescLength = minParamDescLength;
     diagram.minReturnDescLength = minReturnDescLength;
+    diagram.adminMode = adminMode;
 
+    // Define themes
     diagram.themeManager.set('light', {
         colors: {
             text: '#111827',
@@ -259,17 +254,33 @@ export default function init(
         (part instanceof go.Link) && (isCallsOutOfRO(part.fromNode.data.readOnly) || isCallsIntoRO(part.toNode.data.readOnly))
     );
 
+    // Initialize the model
+    setupSaveLoad(diagram);
+
     // Add all of the extra UI elements
     if (title) {
         diagram.add(new go.Part({ layerName: "ViewportBackground", alignment: go.Spot.Top })
             .add(new go.TextBlock(title, {margin: 20}).theme('font', 'title').theme('stroke', 'text')));
     }
-    makeAllButtons(diagram, minFunctions, minTestable);
-    setupFunctionInspector(diagram);
-
-    // Initialize the model
-    setupSaveLoad(diagram);
+    makeAllButtons(diagram);
     setupProblemChecking(diagram);
+
+    // Show the appropriate inspector based on selection
+    const inspectorDiv = setupInspector(diagram);
+    diagram.addDiagramListener('ChangedSelection', (e) => {
+        let subject = e.subject.first();
+        if (subject instanceof go.Link) {
+            return; // keep same
+            //subject = subject.fromNode; // show the fromNode of the link
+            //showModuleInspector(diagram, inspectorDiv); // show module inspector
+        }
+        if (!subject) {
+            showModuleInspector(diagram, inspectorDiv);
+        } else {
+            showFunctionInspector(diagram, inspectorDiv, subject);
+        }
+    });
+    showModuleInspector(diagram, inspectorDiv);
 }
 
 function createToolTip(rootElem) {
@@ -305,6 +316,7 @@ function createToolTip(rootElem) {
 function isCallsIntoRO(ro) {
     return ro === true || (Array.isArray(ro) && (ro.includes('callsInto') || ro.includes('calls')));
 }
+
 function isCallsOutOfRO(ro) {
     return ro === true || (Array.isArray(ro) && (ro.includes('callsOutOf') || ro.includes('calls')));
 }

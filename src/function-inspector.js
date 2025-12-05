@@ -2,172 +2,94 @@
  * Functions for setting up and managing the function inspector panel.
  */
 
-import go from 'gojs';
 import Sortable from 'sortablejs';
 import Swal from 'sweetalert2';
 
+import { wrapWithLabel, makeCheckbox, makeTextarea, makeCodeEditorWithShowCheckbox, makeReadOnlySelect, updateProblemsInInspector, isReadOnly } from './inspector.js';
 import { funcProblems, linkProblems, funcLinkProblems, funcIOProblemsUpdateParents, modelProblems } from './problem-checker.js';
 import { loadSVG, makeOption } from './utils.js';
 
 import TypeEditor from './type-editor.js';
 
-export function setupFunctionInspector(diagram) {
-    const diagramDiv = diagram.div;
-    const rootElem = diagramDiv.parentNode;
+export function showFunctionInspector(diagram, inspectorDiv, node) {
+    const data = node.data;
 
-    const resizer = document.createElement('div');
-    resizer.className = 'inspector-resizer';
-    rootElem.appendChild(resizer);
+    function updateProblems(fix = false, key = null) {
+        // get the problems for this function
+        const problems = funcProblems(data, diagram, fix);
+        if (key === 'name') { // recheck the link problems since "main" is special   
+            diagram.model.setDataProperty(data, 'linkProblems', funcLinkProblems(node));
+            for (const link of node.findLinksConnected()) {
+                diagram.model.setDataProperty(link.data, 'linkProblems', linkProblems(link));
+            }
+        }
+        if (key === 'name' || key === 'testable') {  // recheck the model problems since it counts the number of testable functions and if there is a "main"
+            modelProblems(diagram);
+        }
+        if (key === 'io') {  // recheck the parent's io problems due to indirect/none
+            funcIOProblemsUpdateParents(diagram.findNodeForData(data));
+        }
+        diagram.model.setDataProperty(data, 'problems', problems);
 
-    const inspectorDiv = document.createElement('div');
-    inspectorDiv.className = 'inspector';
-    inspectorDiv.innerHTML = 'TODO';
-    rootElem.appendChild(inspectorDiv);
-
-    const width = rootElem.clientWidth;
-    const initialLeft = Math.min(width - 300, width * 0.8);
-    diagramDiv.style.width = `${initialLeft}px`;
-    resizer.style.left = `${initialLeft}px`;
-    inspectorDiv.style.left = `${initialLeft + resizer.clientWidth}px`;
-
-    function setX(x) {
-        diagramDiv.style.width = `${x}px`;
-        resizer.style.left = `${x}px`;
-        inspectorDiv.style.left = `${x + resizer.clientWidth}px`;
+        // update the inspector
+        const allProbs = problems.concat(data.linkProblems || []);
+        updateProblemsInInspector(inspectorDiv, allProbs);
     }
 
-    resizer.addEventListener('mousedown', (e) => {
-        e.preventDefault();
-        const onMouseMove = (e) => {
-            const rootElemX = rootElem.getBoundingClientRect().left;
-            setX(Math.max(200, Math.min(e.clientX - rootElemX, rootElem.clientWidth - 200)));
-        }
-        const onMouseUp = () => {
-            rootElem.removeEventListener('mousemove', onMouseMove);
-            rootElem.removeEventListener('mouseup', onMouseUp);
-        };
-        rootElem.addEventListener('mousemove', onMouseMove);
-        rootElem.addEventListener('mouseup', onMouseUp);
-    });
-    let lastWidth = width;
-    const resizeObserver = new ResizeObserver((entries) => {
-        for (const entry of entries) {
-            let newWidth = entry.contentRect.width;
-            if (newWidth !== lastWidth) {
-                const curX = parseFloat(diagramDiv.style.width);
-                setX(Math.max(200, Math.min(newWidth - 200, newWidth * curX / lastWidth)));
-                lastWidth = newWidth;
-            }
-        }
-    });
-    resizeObserver.observe(rootElem);
+    function setValue(key, value, fix=false) {
+        diagram.model.setDataProperty(data, key, value);
+        updateProblems(fix, key);
+    }
 
-    function inspectObject(node) {
-        inspectorDiv.innerHTML = '';
-        if (!node) { inspectorDiv.innerHTML = 'TODO'; return; }
-        const problemsDiv = document.createElement('div');
-        problemsDiv.className = 'problems';
-        const data = node.data;
+    // set a value (for one-shot values)
+    function set(key, value) {
+        diagram.commit((d) => { if (data[key] !== value) { setValue(key, value, true); } }, `${key} changed`);
+    }
 
-        function updateProblems(fix = false, key = null) {
-            const problems = funcProblems(data, diagram, fix);
-            for (const elem of Array.from(inspectorDiv.getElementsByClassName('error'))) { elem.classList.remove('error'); }
-            for (const elem of Array.from(inspectorDiv.getElementsByClassName('warning'))) { elem.classList.remove('warning'); }
-            for (const [type, fields, message] of problems) {
-                for (const field of fields.split(',')) {
-                    let elem;
-                    if (field.includes("[")) {
-                        // handle array-like fields (e.g., params[0].name)
-                        const [baseField, rem] = field.split('[');
-                        const [index, name_] = rem.split(']');
-                        const name = name_.slice(1);
-                        elem = inspectorDiv.getElementsByClassName(`func-${baseField}`)[0]
-                            ?.getElementsByClassName(`func-var-${name}`)[index];
-                    } else {
-                        elem = inspectorDiv.getElementsByClassName(`func-${field}`)[0];
-                    }
-                    if (elem) { elem.classList.add(type); }
-                }
+    // update and commit a transaction (for multi-step changes)
+    let currentTransaction = null;
+    function update(key, value, fix=false) {
+        if (data[key] !== value || fix) {
+            // make sure there is a transaction in progress
+            if (currentTransaction !== key) {
+                if (currentTransaction) { diagram.commitTransaction(`${currentTransaction} changed`); }
+                diagram.startTransaction(`${key} changed`);
+                currentTransaction = key;
             }
-            diagram.model.setDataProperty(data, 'problems', problems);
-            if (key === 'name') { // recheck the link problems since "main" is special   
-                diagram.model.setDataProperty(data, 'linkProblems', funcLinkProblems(node));
-                for (const link of node.findLinksConnected()) {
-                    diagram.model.setDataProperty(link.data, 'linkProblems', linkProblems(link));
-                }
-            }
-            if (key === 'name' || key === 'testable') {  // recheck the model problems since it counts the number of testable functions and if there is a "main"
-                modelProblems(diagram);
-            }
-            if (key === 'io') {  // recheck the parent's io problems due to indirect/none
-                funcIOProblemsUpdateParents(diagram.findNodeForData(data));
-            }
-            const allProbs = problems.concat(data.linkProblems || []);
-            if (allProbs.length > 0) {
-                problemsDiv.innerHTML = '<h3>Problems</h3><ul class="problems">' + 
-                    allProbs.map(p => `<li class="${p[0]}">${p[2]}</li>`).join('') + '</ul>';
-            } else {
-                problemsDiv.innerHTML = '';
-            }
+
+            // update the value
+            setValue(key, value, fix);
         }
-
-        function setValue(key, value, fix=false) {
-            diagram.model.setDataProperty(data, key, value);
-            updateProblems(fix, key);
-        }
-
-        // set a value (for one-shot values)
-        function set(key, value) {
-            diagram.commit((d) => { if (data[key] !== value) { setValue(key, value, true); } }, `${key} changed`);
-        }
-
-        // update and commit a transaction (for multi-step changes)
-        let currentTransaction = null;
-        function update(key, value, fix=false) {
-            if (data[key] !== value || fix) {
-                // make sure there is a transaction in progress
-                if (currentTransaction !== key) {
-                    if (currentTransaction) { diagram.commitTransaction(`${currentTransaction} changed`); }
-                    diagram.startTransaction(`${key} changed`);
-                    currentTransaction = key;
-                }
-
-                // update the value
-                setValue(key, value, fix);
-            }
-        }
-        function end(key, value) {
-            update(key, value, true);
-            // commit the transaction
-            if (currentTransaction === key) {
-                diagram.commitTransaction(`${key} changed`);
-                currentTransaction = null;
-            }
-        }
-
-        inspectorDiv.classList.toggle('is-main', data.name === 'main');
-        inspectorDiv.appendChild(makeFuncName(diagram, data, update, end, inspectorDiv));
-        inspectorDiv.appendChild(makeFuncDesc(diagram, data, update, end));
-        inspectorDiv.appendChild(makeParams(diagram, data, update, end));
-        inspectorDiv.appendChild(makeReturns(diagram, data, update, end));
-        inspectorDiv.appendChild(makeIOSelect(diagram, data, set));
-        inspectorDiv.appendChild(makeTestableCheckbox(diagram, data, set));
-        updateProblems();
-        inspectorDiv.appendChild(problemsDiv);
-        if (data.showCode) {
-            inspectorDiv.appendChild(makeCodeEditor(diagram, data, update, end));
+    }
+    function end(key, value) {
+        update(key, value, true);
+        // commit the transaction
+        if (currentTransaction === key) {
+            diagram.commitTransaction(`${key} changed`);
+            currentTransaction = null;
         }
     }
 
-    diagram.addDiagramListener('ChangedSelection', (e) => {
-        let subject = e.subject.first();
-        if (subject instanceof go.Link) {
-            return; // keep same
-            //subject = subject.fromNode; // show the fromNode of the link
-            //inspectorDiv.innerHTML = 'TODO';
-        }
-        inspectObject(subject);
-    });
+    inspectorDiv.innerHTML = '';
+    inspectorDiv.classList.toggle('is-main', data.name === 'main');
+    inspectorDiv.appendChild(makeFuncName(diagram, data, update, end, inspectorDiv));
+    inspectorDiv.appendChild(makeFuncDesc(diagram, data, update, end));
+    inspectorDiv.appendChild(makeParams(diagram, data, update, end));
+    inspectorDiv.appendChild(makeReturns(diagram, data, update, end));
+    inspectorDiv.appendChild(makeIOSelect(diagram, data, set));
+    inspectorDiv.appendChild(makeTestableCheckbox(diagram, data, set));
+    if (diagram.adminMode) {
+        inspectorDiv.appendChild(makeReadOnlySelect(diagram, data, set,
+            ['name', 'params', 'returns', 'desc', 'io', 'testable', 'code', 'testCode', 'calls', 'callsInto', 'callsOutOf']));
+    }
+    const problemsDiv = document.createElement('div');
+    problemsDiv.className = 'problems';
+    inspectorDiv.appendChild(problemsDiv);
+    updateProblems();
+    makeCodeEditorWithShowCheckbox(inspectorDiv, diagram, data, 'code', update, end, set,
+        'Function Code', '# Write your function code here\n');
+    makeCodeEditorWithShowCheckbox(inspectorDiv, diagram, data, 'testCode', update, end, set,
+        'Test Code', '# Write your test code here\n');
 }
 
 function makeFuncName(diagram, data, update, end, inspectorDiv) {
@@ -178,7 +100,7 @@ function makeFuncName(diagram, data, update, end, inspectorDiv) {
     input.required = true;
     input.pattern = '[a-zA-Z_][a-zA-Z0-9_]*';
     input.value = data.name || '';
-    input.readOnly = isReadOnly(data, 'name');
+    input.readOnly = !diagram.adminMode && isReadOnly(data, 'name');
 
     input.addEventListener('input', (e) => {
         inspectorDiv.classList.toggle('is-main', e.target.value.trim() === 'main');
@@ -194,8 +116,7 @@ function makeFuncName(diagram, data, update, end, inspectorDiv) {
     return h2;
 }
 function makeFuncDesc(diagram, data, update, end) {
-    const textarea = makeTextarea(data, 'desc', update, end);
-    textarea.placeholder = 'Description';
+    const textarea = makeTextarea(diagram, data, 'desc', update, end, 'Description');
     textarea.required = true;
     return textarea;
 }
@@ -206,7 +127,7 @@ function createValidIdentifier(name) {
 function makeIOSelect(diagram, data, set) {
     const select = document.createElement('select');
     select.className = 'func-io';
-    select.disabled = isReadOnly(data, 'io');
+    select.disabled = !diagram.adminMode && isReadOnly(data, 'io');
 
     const options = [
         { value: 'none', text: 'None' },
@@ -229,66 +150,7 @@ function makeIOSelect(diagram, data, set) {
     return wrapWithLabel(select, 'User I/O: ');
 }
 function makeTestableCheckbox(diagram, data, set) {
-    const checkbox = document.createElement('input');
-    checkbox.type = 'checkbox';
-    checkbox.className = 'func-testable';
-    checkbox.checked = data.testable || false;
-    checkbox.disabled = isReadOnly(data, 'testable');
-    checkbox.addEventListener('change', (e) => { set('testable', e.target.checked); });
-    return wrapWithLabel(checkbox, 'Testable: ');
-}
-function wrapWithLabel(elem, text) {
-    const label = document.createElement('label');
-    const span = document.createElement('span');
-    span.textContent = text;
-    label.appendChild(span);
-    label.appendChild(elem);
-    return label;
-}
-function makeCodeEditor(diagram, data, update, end) {
-    let textarea;
-    if (isReadOnly(data, 'code') && typeof Prism !== 'undefined') {
-        textarea = document.createElement('div');
-        textarea.className = 'func-code language-python';
-        textarea.innerHTML = Prism.highlight(data.code || '', Prism.languages.python, 'python');
-    } else {
-        textarea = makeTextarea(data, 'code', update, end);
-        textarea.rows = data.code.trim().split('\n').length + 2;
-        textarea.placeholder = '# Write your function code here\n';
-    }
-
-    const div = document.createElement('div');
-    div.className = 'func-code-box';
-    const label = document.createElement('label');
-    label.textContent = 'Function Code';
-    div.appendChild(label);
-    div.appendChild(textarea);
-    return div;
-}
-function makeTextarea(data, field, update, end) {
-    const textarea = document.createElement('textarea');
-
-    // auto-resize the textarea if field-sizing is not supported
-    if (!CSS.supports("field-sizing: content")) {
-        textarea.addEventListener('input', (e) => {
-            e.target.style.height = "";
-            e.target.style.height = e.target.scrollHeight + 5 + "px";
-        });
-        setTimeout(() => {
-            textarea.style.height = textarea.scrollHeight + 5 + "px";
-        }, 0);
-    }
-
-    // set up the textarea
-    textarea.className = `func-${field}`;
-    textarea.value = data[field] || '';
-    textarea.readOnly = isReadOnly(data, field);
-    if (!textarea.readOnly) {
-        textarea.addEventListener('input', (e) => { update(field, e.target.value); });
-        textarea.addEventListener('blur', (e) => { end(field, e.target.value); });
-    }
-
-    return textarea;
+    return wrapWithLabel(makeCheckbox(diagram, data, 'testable', set), 'Testable: ');
 }
 
 function makeParams(diagram, data, update, end) {
@@ -296,7 +158,7 @@ function makeParams(diagram, data, update, end) {
 }
 function makeParam(diagram, data, save, index=-1) {
     const pData = (index >= 0) ? data.params[index] : { name: '', type: '', desc: '' };
-    const ro = isReadOnly(data, 'params') || isReadOnly(data, `params.${pData.name}`) || isReadOnly(data, `params.${index}`);
+    const ro = !diagram.adminMode && (isReadOnly(data, 'params') || isReadOnly(data, `params.${pData.name}`) || isReadOnly(data, `params.${index}`));
     return createVarBox(diagram, pData, ro, () => makeParam(diagram, data, save), save);
 }
 function saveParams(div, update, end, major=false) {
@@ -317,7 +179,7 @@ function makeReturns(diagram, data, update, end) {
 }
 function makeReturn(diagram, data, save, index=-1) {
     const rData = (index >= 0) ? data.returns[index] : { type: '', desc: '' };
-    const ro = isReadOnly(data, 'returns') || isReadOnly(data, `returns.${index}`);
+    const ro = !diagram.adminMode && (isReadOnly(data, 'returns') || isReadOnly(data, `returns.${index}`));
     return createVarBox(diagram, rData, ro, () => makeReturn(diagram, data, save), save);
 }
 function saveReturns(div, update, end, major=false) {
@@ -345,11 +207,12 @@ function createVarsBox(diagram, name, field, data, update, end, saveVar, makeVar
     function make(index=-1) { list.appendChild(makeVar(diagram, data, save, index)); }
 
     div.appendChild(createSectionHeader(name+"(s)"));
-    addAddButton(div, () => { make(); save(true); }, isReadOnly(data, field));
+    const ro = !diagram.adminMode && isReadOnly(data, field);
+    addAddButton(div, () => { make(); save(true); }, ro);
     div.appendChild(list);
     for (const index of (data[field] || []).keys()) { make(index); }
     // save();
-    if (!isReadOnly(data, field)) {
+    if (!ro) {
         Sortable.create(list, {
             group: field,
             handle: '.func-var-drag-handle',
@@ -387,6 +250,8 @@ function addNameElement(elem, value, callback, locked=false) {
     name.value = value || '';
     elem.appendChild(name);
 }
+
+////////// Type editor functions //////////
 function getTypeText(type) {
     if (type === "list") { return "list of ..."; }
     if (type === "tuple") { return "tuple with ..."; }
@@ -517,10 +382,3 @@ function addRemoveButton(elem, callback, locked=false) {
     addVarButton(elem, "remove", () => { elem.parentElement.removeChild(elem); callback(); }, locked);
 }
 
-function isReadOnly(data, type) {
-    // The data.readOnly can be a boolean (overall read-only) or an array of strings of read only parts
-    // The part/type can be:
-    //     one of the fields: 'name', 'params', 'returns', 'desc', 'io', 'testable'
-    //     one of the special values: 'calls' (both in or out), 'callsInto', 'callsOutOf'
-    return data.readOnly === true || (Array.isArray(data.readOnly) && data.readOnly.includes(type));
-}

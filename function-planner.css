@@ -269,11 +269,32 @@ div:where(.swal2-container) img:where(.swal2-image) { margin: 2em auto 0 !import
     input.warning, textarea.warning, select.warning { background-color: rgb(from var(--warning-color) r g b / 0.2); border: 1px solid var(--warning-color) !important; accent-color: var(--warning-color); }
     input.error, textarea.error, select.error { background-color: rgb(from var(--error-color) r g b / 0.2); border: 1px solid var(--error-color) !important; accent-color: var(--error-color); }
     select.func-io { field-sizing: content; }
-    .func-code-box {
-        label { font-weight: bold; display: block; margin-bottom: 0.25em; font-size: 1.1em; }
-        textarea.func-code { font-family: monospace; font-size: 0.9em; white-space: pre; tab-size: 4; color: var(--text-color); }
+    .func-code-box textarea { font-family: monospace; font-size: 0.9em; white-space: pre; tab-size: 4; color: var(--text-color); }
+    .func-code-box label, label:has(textarea) {
+        font-weight: bold; display: block; margin-bottom: 0.25em; margin-top: 1em; font-size: 1.1em;
+        span { width: auto; }
     }
 
+    label:has(.func-testable:not(:checked)) ~ .func-code-box:has(.func-testCode) { display: none; }
+    label:has(.func-testable:checked) ~ .func-code-box:has(.func-testCode) { display: block; }
+
+    /* Function admin mode options */
+    label:has(.func-authors) span { width: 2em; }
+    .func-authors { width: calc(100% - 2.5em); }
+    .func-readonly {
+        label:first-of-type span { width: 5.5em; }
+        label:not(:first-of-type) {
+            display: none;
+            margin-left: 5.5em;
+            width: auto;
+            span { font-weight: normal; }
+        }
+        label:has(option[value="custom"]:checked) ~ label:not(:first-of-type) {
+            display: block;
+        }
+    }
+    label:has(input[type="checkbox"]:not(.func-testable)) span { width: auto; }
+    .func-readonly + label { margin-top: 0em !important; }
 
     /* Function params/returns */
     .func-var { margin: 0.75em 0; padding: 0.5em; padding-left: 0.6em; border: 1px solid var(--stroke-color); border-radius: 0.5em; background-color: var(--insp-var-background-color); position: relative; box-shadow: 0 0 0.5em var(--shadow-color); }
@@ -390,7 +411,7 @@ div:where(.swal2-container) img:where(.swal2-image) { margin: 2em auto 0 !import
 
 
 /* Python syntax highlighting colors for dark theme from VS Code Dark Modern */
-.func-code {
+.code-box {
   display: block;
   background: #1f1f1f;
   padding: 0.5em;
@@ -400,17 +421,17 @@ div:where(.swal2-container) img:where(.swal2-image) { margin: 2em auto 0 !import
   overflow: auto;
   color: white;
 }
-.func-code .token { margin: 0 !important; text-shadow: none !important; color: inherit !important; }
-.func-code .token.comment { color: #6A9955 !important; }
-.func-code .token.operator { color: #D4D4D4 !important; }
-.func-code .token.operator.keyword { color: #569CD6 !important; }  /* the word-operators and, or, not, is */
-.func-code .token.punctuation { color: #CCCCCC !important; }  /* square brackets, parentheses, etc. - should actually take into account nesting */
-.func-code .token.number { color: #B5CEA8 !important; }
-.func-code .token.keyword { color: #C586C0 !important; }
-.func-code .token.boolean { color: #569CD6 !important; }
-.func-code .token.string { color: #CE9178 !important; }
-.func-code .token.variable { color: #9CDCFE !important; }
-.func-code .token.constant { color: #4FC1FF !important; }
-.func-code .token.function, .func-code .token.builtin, .func-code .token.function-call { color: #DCDCAA !important; }
-.func-code .token.class-name, .func-code .token.type { color: #4EC9B0 !important; }
-.func-code::selection, .func-code .token::selection { background: #667B8F !important; }
+.code-box .token { margin: 0 !important; text-shadow: none !important; color: inherit !important; }
+.code-box .token.comment { color: #6A9955 !important; }
+.code-box .token.operator { color: #D4D4D4 !important; }
+.code-box .token.operator.keyword { color: #569CD6 !important; }  /* the word-operators and, or, not, is */
+.code-box .token.punctuation { color: #CCCCCC !important; }  /* square brackets, parentheses, etc. - should actually take into account nesting */
+.code-box .token.number { color: #B5CEA8 !important; }
+.code-box .token.keyword { color: #C586C0 !important; }
+.code-box .token.boolean { color: #569CD6 !important; }
+.code-box .token.string { color: #CE9178 !important; }
+.code-box .token.variable { color: #9CDCFE !important; }
+.code-box .token.constant { color: #4FC1FF !important; }
+.code-box .token.function, .code-box .token.builtin, .code-box .token.function-call { color: #DCDCAA !important; }
+.code-box .token.class-name, .code-box .token.type { color: #4EC9B0 !important; }
+.code-box::selection, .code-box .token::selection { background: #667B8F !important; }

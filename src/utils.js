@@ -59,7 +59,7 @@ export function escapeHtml(unsafe) {
 export function makeOption(value, text) {
     let option = document.createElement("option");
     option.value = value;
-    option.text = text;
+    option.text = text || value;
     return option;
 }
 
