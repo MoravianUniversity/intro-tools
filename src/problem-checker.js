@@ -154,7 +154,6 @@ export function modelProblems(diagram) {
  * @param {*} startingKey 
  */
 function modelLinkProblems(diagram, startingKey = null) {
-    // TODO: when main gets a parent that is then removed, it still thinks it's a problem until refreshed
     const model = diagram.model;
     const cycles = findCycles(diagram, startingKey).filter(cycle => cycle.length > 1); // only cycles with more than one node (self-recursive functions are already handled)
     const map = cyclesToMap(cycles);
