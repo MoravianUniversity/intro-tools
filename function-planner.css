@@ -8,6 +8,7 @@ div:where(.swal2-container) img:where(.swal2-image) { margin: 2em auto 0 !import
     --diagram-background-color-drag-over: #acccf0; /* 75%*diagram-background-color + 25%*button-color */
 
     --text-color: #111827;                 /* gray-900 */
+    --placeholder-color: #6b7280;          /* gray-500 */
     --stroke-color: var(--text-color);
     --error-color: #dc2626;
     --warning-color: #f6af00;
@@ -42,7 +43,8 @@ div:where(.swal2-container) img:where(.swal2-image) { margin: 2em auto 0 !import
     --diagram-background-color: #1f2937;   /* gray-800 */
     --diagram-background-color-drag-over: #173e69; /* 75%*diagram-background-color + 25%*button-hover-color */
 
-    --text-color: #f3f4f6;                 /* gray-100 */
+    --text-color: #e5e7eb;                 /* gray-200 */
+    --placeholder-color: #b6bcc5;          /* gray-350 */
     --warning-color: #ffd600;
     /* --warning-contrast-color: transparent; */
     --shadow-color: #6b7280;               /* gray-500 */
@@ -258,18 +260,20 @@ div:where(.swal2-container) img:where(.swal2-image) { margin: 2em auto 0 !import
 
     h2 { font-size: 1.18em; margin: 0; border-bottom: 2px solid var(--text-color); margin: 0; }
     h3 { font-size: 1.1em; margin-bottom: 0; }
-    input.func-name { font-family: monospace; font-size: 1.18em; width: 100%; background-color: transparent; border: 1px solid transparent; color: var(--text-color); }
+    
+    input.func-name { font-family: monospace; font-size: 1.18em; width: 100%; border: 1px solid transparent; }
     textarea { width: 100%; min-height: 3.75em; resize: vertical; }
     input:read-only, textarea:read-only { background-color: transparent; border: 1px solid transparent; }
 
     /*:invalid, :user-invalid { background-color: rgb(from var(--error-color) r g b / 0.2) !important; border: 1px solid var(--error-color) !important; }*/
-    input, textarea, select { border: 1px solid var(--insp-var-input-border-color); }
+    input, textarea, select { border: 1px solid var(--insp-var-input-border-color); background-color: var(--tool-background-color); color: var(--text-color); }
     textarea { field-sizing: content; }
-    input::placeholder, textarea::placeholder, select:has(option[value=""]:checked) { color: #666; opacity: 1; font-style: italic; }
+    input::placeholder, textarea::placeholder, select:has(option[value=""]:checked) { color: var(--placeholder-color); opacity: 1; font-style: italic; }
     input.warning, textarea.warning, select.warning { background-color: rgb(from var(--warning-color) r g b / 0.2); border: 1px solid var(--warning-color) !important; accent-color: var(--warning-color); }
     input.error, textarea.error, select.error { background-color: rgb(from var(--error-color) r g b / 0.2); border: 1px solid var(--error-color) !important; accent-color: var(--error-color); }
     select.func-io { field-sizing: content; }
-    .func-code-box textarea { font-family: monospace; font-size: 0.9em; white-space: pre; tab-size: 4; color: var(--text-color); }
+    .func-code-box textarea { font-family: monospace; font-size: 0.9em; white-space: pre; tab-size: 4; }
+    .func-code-box textarea::placeholder { color: #aaa; }
     .func-code-box label, label:has(textarea) {
         font-weight: bold; display: block; margin-bottom: 0.25em; margin-top: 1em; font-size: 1.1em;
         span { width: auto; }
@@ -326,6 +330,8 @@ div:where(.swal2-container) img:where(.swal2-image) { margin: 2em auto 0 !import
             width: 1.575em; height: 1.575em;
             padding: 0;
             border: 1px solid var(--insp-var-input-border-color);
+            background-color: var(--tool-background-color);
+            color: var(--text-color);
             text-align: center;
             vertical-align: bottom;
         }
@@ -396,7 +402,7 @@ div:where(.swal2-container) img:where(.swal2-image) { margin: 2em auto 0 !import
     button { cursor: pointer; }
     button:disabled { color: gray; cursor: not-allowed; opacity: 0.5; }
     select:first-child { margin-left: 0; }
-    select:has(option[value=""]:checked) { color: #666; font-style: italic; }
+    select:has(option[value=""]:checked) { color: var(--placeholder-color); font-style: italic; }
     .custom-type-input { font-family: inherit; }
     .mode-select { margin: 0 5px; }
     .connector { margin: 0 2px; }
