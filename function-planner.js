@@ -2,17 +2,17 @@
  * This file contains the code for the function planner tool.
  * 
  * Next:
- *   - Show all types on dropdowns that have been used anywhere in the plan   [in progress]
- *   - fix issues with problems not updating correctly sometimes
- *   - Allow editing of the function names in the diagram directly
- *      https://forum.nwoods.com/t/how-to-expand-nodes-size-dynamically-when-the-text-in-its-textblock-is-being-entered/8253/17
+ *  - show all types on dropdowns that have been used anywhere in the plan   [in progress]
+ *  - how to save module-level settings?
  *  - in dark mode, lots of the function inspector text is hard to read (especially when errors/defaults)
  *  - in light mode, code boxes are hard to read
  *
  * Future ideas:
+ *  - allow editing of the function names in the diagram directly
+ *      https://forum.nwoods.com/t/how-to-expand-nodes-size-dynamically-when-the-text-in-its-textblock-is-being-entered/8253/17
  *  - better display of the first line of the function (make it look like Python, text boxes that auto-resize)
  *  - some model settings propagate into in-progress model without resetting? (i.e. new functions, into read-only functions, etc)
- *  - a few less parentheses in the type editor string generation
+ *  - a few less parentheses in the type editor string generation (and can dicts nest?)
  *  - server side saving and loading of plans, collaboration, instructor side of things
  */
 
@@ -122,7 +122,7 @@ export default function init(
             'bg-output': '#09f',
             'bg-indirect': '#d1d5db',
             'bg-none': '#d1d5db',
-            'bg-undefined': '#d1d5db', // TODO: this comes up sometimes? setting main to testable and then back to non-testable
+            'bg-undefined': '#ff0000', // for debugging
         },
         fonts: {
             text: '14px monospace', // 0.875rem - using a rem unit messes up rendering
@@ -168,8 +168,8 @@ export default function init(
                 toLinkable: true, toLinkableSelfNode: true, toLinkableDuplicates: false,
             })
                 .theme('fill', 'bg-none')
-                .themeData('fill', 'testable', null, (t, o) => t ? 'bg-testable' : `bg-${o.part.data.io}`)
-                .themeData('fill', 'io', null, (io, o) => o.part.data.testable ? 'bg-testable' : `bg-${io}`)
+                .themeData('fill', 'testable', null, (t, o) => t ? 'bg-testable' : `bg-${o.part.data.io || 'none'}`)
+                .themeData('fill', 'io', null, (io, o) => o.part.data.testable ? 'bg-testable' : `bg-${io || 'none'}`)
                 .themeData('stroke', 'problems', null, strokeColor2)
                 .themeData('stroke', 'linkProblems', null, strokeColor2)
                 .bind('fromLinkable', 'readOnly', (ro) => !isCallsOutOfRO(ro))
