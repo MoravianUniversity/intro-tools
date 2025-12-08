@@ -313,7 +313,6 @@ function addTypeElement(diagram, elem, value, callback, locked=false) {
 
     select.className = "func-var-type";
     if (value) {
-        console.log("setting type to", value);
         setCustomTypeOption(select, value);
         select.lastSelected = value;
     } else {

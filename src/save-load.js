@@ -472,9 +472,9 @@ function setupDragAndDrop(diagram) {
 
         if (e.dataTransfer.items) {
             // TODO: dragging from VS Code comes over as a set of strings?
-            console.log([...e.dataTransfer.items].filter(item => item.kind === "file").length,
-                [...e.dataTransfer.items].filter(item => item.kind === "string").length);
-            console.log(e.dataTransfer.files.length);
+            // console.log([...e.dataTransfer.items].filter(item => item.kind === "file").length,
+            //     [...e.dataTransfer.items].filter(item => item.kind === "string").length);
+            // console.log(e.dataTransfer.files.length);
 
             const items = e.dataTransfer.items;
             if (items.length >= 3 && items[0].kind === "string" && items[1].kind === "string" && items[2].kind === "string") {
