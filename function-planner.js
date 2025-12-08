@@ -2,7 +2,6 @@
  * This file contains the code for the function planner tool.
  * 
  * Next:
- *  - show all types on dropdowns that have been used anywhere in the plan   [in progress]
  *  - how to save module-level settings?
  *  - in dark mode, lots of the function inspector text is hard to read (especially when errors/defaults)
  *  - in light mode, code boxes are hard to read

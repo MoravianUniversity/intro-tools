@@ -260,16 +260,24 @@ function getTypeText(type) {
     if (type === "custom") { return "custom..."; }
     return type;
 }
-function removeCustomTypeOption(select) {
-    // const options = select.options;
-    // if (options[options.length - 1].customType) { select.removeChild(options[options.length - 1]); }
-}
 function addCustomTypeOption(select, type) {
-    //removeCustomTypeOption(select);
-    const opt = makeOption(type, type);
+    const opt = makeOption(type);
     opt.customType = true;
     opt.setAttribute("data-custom-type", "true");
     select.options.add(opt);
+}
+function addCustomTypeOptionToAll(select, type) {
+    const inspector = select.closest('.inspector');
+    const allSelects = inspector ? inspector.querySelectorAll('select.func-var-type') : [select];
+    for (const sel of allSelects) {
+        addCustomTypeOption(sel, type);
+    }
+}
+function setCustomTypeOption(select, type) {
+    const matches = [...select.options].filter(opt => opt.value === type);
+    if (matches.length === 0) {
+        addCustomTypeOptionToAll(select, type);
+    }
     select.value = type;
 }
 function addTypeElement(diagram, elem, value, callback, locked=false) {
@@ -277,36 +285,42 @@ function addTypeElement(diagram, elem, value, callback, locked=false) {
     holder.className = "func-var-type-holder";
     elem.appendChild(holder);
 
-    const type = document.createElement("select");
-    type.addEventListener("change", async () => {
-        if (type.selectedOptions[0].text.endsWith("...")) {
-            const result = await showTypeBuilder(diagram, type.value);
-            if (result === null) { type.value = type.lastSelected; return; }
-            addCustomTypeOption(type, result);
-        } else { removeCustomTypeOption(type); }
+    const select = document.createElement("select");
+
+    select.addEventListener("change", async () => {
+        if (select.selectedOptions[0].text.endsWith("...")) {
+            const result = await showTypeBuilder(diagram, select.value);
+            if (result === null) { select.value = select.lastSelected; return; }
+            setCustomTypeOption(select, result);
+        }
         callback();
     });
-    type.appendChild(makeOption("", "type")); // blank option
+    select.appendChild(makeOption("", "type")); // blank option
     for (const t of diagram.allowedTypes) {
-        type.appendChild(makeOption(t, getTypeText(t)));
+        select.appendChild(makeOption(t, getTypeText(t)));
     }
     const allSpecialTypes = new Set();
     for (const funcNode of diagram.nodes) {
         const all = (funcNode.data.returns || []).concat(funcNode.data.params || []).map(v => v.type)
             .filter(type => type && !diagram.allowedTypes.includes(type));
-        console.log(all);
-        if (all.length > 0) { allSpecialTypes.add(...all); }
+        for (const t of all) {
+            allSpecialTypes.add(t);
+        }
     }
     for (const t of allSpecialTypes) {
-        addCustomTypeOption(type, t);
+        addCustomTypeOption(select, t);
     }
 
-    type.className = "func-var-type";
-    if (value && diagram.allowedTypes.includes(value)) { type.value = value; }
-    else if (value) { addCustomTypeOption(type, value); }
-    type.lastSelected = type.selectedOptions[0].value;
-    type.disabled = locked;
-    holder.appendChild(type);
+    select.className = "func-var-type";
+    if (value) {
+        console.log("setting type to", value);
+        setCustomTypeOption(select, value);
+        select.lastSelected = value;
+    } else {
+        select.value = "";
+    }
+    select.disabled = locked;
+    holder.appendChild(select);
 
     if (!locked) {
         // edit button
@@ -316,8 +330,11 @@ function addTypeElement(diagram, elem, value, callback, locked=false) {
         button.title = "Edit Type...";
         button.innerHTML = "&#9998;";
         button.addEventListener("click", async () => {
-            const result = await showTypeBuilder(diagram, type.value);
-            if (result !== null) { addCustomTypeOption(type, result); callback(); }
+            const result = await showTypeBuilder(diagram, select.value);
+            if (result !== null) {
+                setCustomTypeOption(result);
+                callback();
+            }
         });
         holder.appendChild(button);
     }
@@ -346,6 +363,8 @@ async function showTypeBuilder(diagram, initialType) {
     });
     return returnValue.isConfirmed ? result : null;
 }
+
+// Other parts of a variable box
 function addDescElement(elem, value, callback, locked=false) {
     let desc = document.createElement("input");
     desc.addEventListener("input", () => callback(false));
