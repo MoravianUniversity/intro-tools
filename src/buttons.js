@@ -64,7 +64,7 @@ function makeWidgetButtons(diagram) {
         }
     });
 
-    let undoButton = addButton(holder, 'undo.svg', 'no-outline', `Undo (${ctrl}Z)`, () => { if (diagram.undoManager.canUndo()) { diagram.undoManager.undo(); } });
+    const undoButton = addButton(holder, 'undo.svg', 'no-outline', `Undo (${ctrl}Z)`, () => { if (diagram.undoManager.canUndo()) { diagram.undoManager.undo(); } });
     undoButton.disabled = !diagram.undoManager.canUndo();
     diagram.addModelChangedListener((e) => {
         if (e.isTransactionFinished) {
@@ -75,7 +75,12 @@ function makeWidgetButtons(diagram) {
     addButton(holder, 'reset.svg', 'no-outline', `Reset`, () => { reset(diagram); });
 
     addButton(holder, 'python.svg', '', 'Create Python Template', () => { exportToPython(diagram); });
-    addButton(holder, 'unit-tests.svg', '', 'Generate Python Unit Tests', () => { exportPythonTests(diagram); });
+    const testButton = addButton(holder, 'unit-tests.svg', '', 'Generate Python Unit Tests', () => { exportPythonTests(diagram); });
+    diagram.addModelChangedListener((e) => {
+        if (e.isTransactionFinished) {
+            testButton.disabled = diagram.model.nodeDataArray.every(n => !n.testable);
+        }
+    });
     addButton(holder, 'save.svg', 'no-outline', 'Save as JSON', () => { saveJSON(diagram); });
     addButton(holder, 'load.svg', 'no-outline', 'Load from JSON', () => { loadJSON(diagram); });
     addButton(holder, 'merge.svg', 'no-outline', 'Merge from JSON', () => { importJSON(diagram); });
