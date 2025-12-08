@@ -5,13 +5,12 @@
  *  - setupProblemChecking(diagram)
  *  - updateAllProblems(diagram)
  *  - modelProblems(diagram)
+ *  - willFuncBecomeRecursive(diagram, from, to)
  *  - linkProblems(link)
  *  - funcLinkProblems(node)
  *  - funcIOProblemsUpdateParents(node, visited=new Set())
  *  - funcProblems(data, diagram, fix=false)
- * 
- * TODO: need to document all exported functions (what is their difference?)
- */
+  */
 
 import go from 'gojs';
 
@@ -222,6 +221,40 @@ function cyclesToMap(cycles) {
     return links;
 }
 
+/**
+ * Checks if the given function will become part of a cycle in the call graph.
+ * @param {*} diagram 
+ * @param {go.Node} from the source node of a new link
+ * @param {go.Node} to the destination node of a new link
+ * @returns {boolean} True if the function will become part of a cycle by adding the link.
+ */
+export function willFuncBecomeRecursive(diagram, from, to) {
+    if (from === to) { return true; }
+    const fromKey = from.data.key;
+    const model = diagram.model;
+    const callGraph = linksToMap(model.linkDataArray);
+    if (!callGraph[fromKey]) { callGraph[fromKey] = []; }
+    callGraph[fromKey].push(to.data.key);
+    const visited = new Set();
+    const stack = [];
+    const dfs = function(key) {
+        visited.add(key);
+        stack.push(key);
+        for (const next of callGraph[key] || []) {
+            if (next === fromKey || !stack.includes(next) && dfs(next)) { return true; }
+        }
+        stack.pop();
+        return false;
+    }
+    return dfs(to.data.key);
+}
+
+/**
+ * Checks for problems with a specific link. Does not check for long recursive cycles (that is done
+ * in modelLinkProblems).
+ * @param {go.Link} link 
+ * @returns array of problems found: [ [severity, field, message], ... ]
+ */
 export function linkProblems(link) {
     const data = link.data;
     const problems = [];
@@ -229,6 +262,11 @@ export function linkProblems(link) {
     else if (link.toNode === link.fromNode) { problems.push(["warning", "link", "Recursive functions are tricky, be careful if this is what you intended."]); }
     return problems;
 }
+/**
+ * Checks for problems with the links of a specific function.
+ * @param {go.Node} node 
+ * @returns array of problems found: [ [severity, field, message], ... ]
+ */
 export function funcLinkProblems(node) {
     const data = node.data;
     const problems = [];
@@ -275,6 +313,12 @@ function funcIOProblemsUpdate(node) {
     const newProblems = curProblems.filter(p => !p[1].split(',').includes('io')).concat(ioProblems);
     if (!deepEquals(curProblems, newProblems)) { node.diagram.model.setDataProperty(node.data, 'problems', newProblems); }
 }
+/**
+ * Updates the I/O problems for the given node and all of its parent nodes. Updates the problems
+ * attribute of each node as needed.
+ * @param {go.Node} node 
+ * @param {Set<number>} visited - do not provide, used to avoid infinite recursion
+ */
 export function funcIOProblemsUpdateParents(node, visited = new Set()) {
     if (visited.has(node.key)) return; // avoid infinite recursion
     visited.add(node.key);
@@ -310,6 +354,13 @@ function checkName(name, type, field) {
     if (!/^[a-z_][a-z0-9_]*$/.test(name)) { return ["warning", field, `${type} names should be in lowercase with underscores separating words.`]; }
     return null;
 }
+/**
+ * Checks for problems with a specific function.
+ * @param {*} data 
+ * @param {*} diagram 
+ * @param {boolean} fix - If true, attempts to fix problems where possible
+ * @returns array of problems found: [ [severity, field, message], ... ]
+ */
 export function funcProblems(data, diagram, fix=false) {
     const problems = [];
 

@@ -3,8 +3,6 @@
  * 
  * Next:
  *  - how to save module-level settings?
- *  - in dark mode, lots of the function inspector text is hard to read (especially when errors/defaults)
- *  - in light mode, code boxes are hard to read
  *
  * Future ideas:
  *  - allow editing of the function names in the diagram directly
@@ -21,7 +19,7 @@ import { AvoidsLinksRouter } from './src/AvoidsLinksRouter.js';
 
 import { makeAllButtons } from './src/buttons.js';
 import { setupSaveLoad, pythonDefLine } from './src/save-load.js';
-import { setupProblemChecking } from './src/problem-checker.js';
+import { setupProblemChecking, willFuncBecomeRecursive } from './src/problem-checker.js';
 import { setupInspector } from './src/inspector.js';
 import { showFunctionInspector } from './src/function-inspector.js';
 import { showModuleInspector } from './src/module-inspector.js';
@@ -244,7 +242,7 @@ export default function init(
         if (isCallsOutOfRO(fromNode.data.readOnly)) { return false; }
         if (link && link.fromNode !== fromNode && isCallsIntoRO(link.fromNode.data.readOnly)) { return false; }
         if (link && link.toNode !== toNode && isCallsOutOfRO(link.toNode.data.readOnly)) { return false; }
-        if (!ALLOW_RECURSIVE && fromNode === toNode) { return false; } // TODO: indirect recursion as well?
+        if (!ALLOW_RECURSIVE && willFuncBecomeRecursive(diagram, fromNode, toNode)) { return false; }
         return true;
     }
     diagram.toolManager.linkingTool.linkValidation = linkValidator;
