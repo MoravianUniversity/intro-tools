@@ -10,6 +10,8 @@
  *  - funcLinkProblems(node)
  *  - funcIOProblemsUpdateParents(node, visited=new Set())
  *  - funcProblems(data, diagram, fix=false)
+ *  - checkName(name, type="Function", field="name")
+ *  - isFunctionNameNotUnique(data, diagram)
   */
 
 import go from 'gojs';
@@ -118,19 +120,23 @@ export function modelProblems(diagram) {
     if (!hasMain) { problems.push(["error", "main", "There must be a main() function."]); }
 
     // Check for module documentation
-    const docLen = (model.documentation || '').trim().length;
-    if (!model.documentation || docLen === 0) {
-        problems.push(["error", "documentation", "Module documentation is missing."]);
-    } else if (docLen < (diagram.minModuleDescLength ?? 25)) {
-        problems.push(["warning", "documentation", "Module documentation is too short."]);
+    if (!diagram.callGraphOnly) {
+        const docLen = (model.documentation || '').trim().length;
+        if (!model.documentation || docLen === 0) {
+            problems.push(["error", "documentation", "Module documentation is missing."]);
+        } else if (docLen < (diagram.minModuleDescLength ?? 25)) {
+            problems.push(["warning", "documentation", "Module documentation is too short."]);
+        }
     }
 
     // Check for author names
-    const authors = (model.authors || '').trim();
-    if (!model.authors || authors.length === 0) {
-        problems.push(["error", "authors", "Author name(s) are required."]);
-    } else if (authors.length < 3) {
-        problems.push(["warning", "authors", "Author name(s) seem too short."]);
+    if (!diagram.callGraphOnly) {
+        const authors = (model.authors || '').trim();
+        if (!model.authors || authors.length === 0) {
+            problems.push(["error", "authors", "Author name(s) are required."]);
+        } else if (authors.length < 3) {
+            problems.push(["warning", "authors", "Author name(s) seem too short."]);
+        }
     }
 
     // Check that there are a minimum number of functions in total
@@ -320,6 +326,7 @@ function funcIOProblemsUpdate(node) {
  * @param {Set<number>} visited - do not provide, used to avoid infinite recursion
  */
 export function funcIOProblemsUpdateParents(node, visited = new Set()) {
+    if (node.diagram.callGraphOnly) return; // no I/O problem checking
     if (visited.has(node.key)) return; // avoid infinite recursion
     visited.add(node.key);
     funcIOProblemsUpdate(node);
@@ -345,7 +352,14 @@ const PYTHON_BUILTINS = new Set([
     'setattr', 'slice', 'sorted', 'staticmethod', 'str', 'sum', 'super',
     'tuple', 'type', 'vars', 'zip'
 ]);
-function checkName(name, type, field) {
+/**
+ * Checks for problems with a specific name.
+ * @param {string} name the name to check
+ * @param {string} type 
+ * @param {string} field 
+ * @returns [severity, field, message] if a problem is found, null otherwise
+ */
+export function checkName(name, type="Function", field="name") {
     if (!name) { return ["error", field, `${type} name is required.`]; }
     if (!/^[a-zA-Z_][a-zA-Z0-9_]*$/.test(name)) { return ["error", field, `${type} name must start with a letter or underscore and contain only letters, numbers, and underscores.`]; }
     if (PYTHON_KEYWORDS.has(name)) { return ["error", field, `${type} name cannot be a Python keyword.`]; }
@@ -354,6 +368,19 @@ function checkName(name, type, field) {
     if (!/^[a-z_][a-z0-9_]*$/.test(name)) { return ["warning", field, `${type} names should be in lowercase with underscores separating words.`]; }
     return null;
 }
+
+/**
+ * Checks if a function name is not unique within the diagram.
+ * @param {string} name 
+ * @param {*} diagram 
+ * @param {boolean} changedInData - If true, assumes the name has already been changed in the data.
+ * @returns {boolean} True if the function name is not unique, false otherwise
+ */
+export function isFunctionNameNotUnique(name, diagram, changedInData=true) {
+    if (!name || !diagram) { return false; }
+    return diagram.findNodesByExample({ name }).count > (changedInData ? 1 : 0);
+}
+
 /**
  * Checks for problems with a specific function.
  * @param {*} data 
@@ -366,7 +393,8 @@ export function funcProblems(data, diagram, fix=false) {
 
     const nameProblem = checkName(data.name, "Function", "name");
     if (nameProblem) { problems.push(nameProblem); }
-    if (data.name && diagram && diagram.findNodesByExample({ name: data.name }).count > 1) { problems.push(["error", "name", "Function name must be unique."]); }
+    if (isFunctionNameNotUnique(data.name, diagram)) { problems.push(["error", "name", "Function name must be unique."]); }
+    if (diagram && diagram.callGraphOnly) { return problems; }
 
     const isMain = data.name === 'main';
     const desc = (data.desc || '').trim();

@@ -5,8 +5,6 @@
  *  - how to save module-level settings?
  *
  * Future ideas:
- *  - allow editing of the function names in the diagram directly
- *      https://forum.nwoods.com/t/how-to-expand-nodes-size-dynamically-when-the-text-in-its-textblock-is-being-entered/8253/17
  *  - better display of the first line of the function (make it look like Python, text boxes that auto-resize)
  *  - some model settings propagate into in-progress model without resetting? (i.e. new functions, into read-only functions, etc)
  *  - a few less parentheses in the type editor string generation (and can dicts nest?)
@@ -17,9 +15,10 @@ import go from 'gojs';
 
 import { AvoidsLinksRouter } from './src/AvoidsLinksRouter.js';
 
+import { makeNameEditor } from './src/name-editor.js';
 import { makeAllButtons } from './src/buttons.js';
 import { setupSaveLoad, pythonDefLine } from './src/save-load.js';
-import { setupProblemChecking, willFuncBecomeRecursive } from './src/problem-checker.js';
+import { setupProblemChecking, updateAllProblems, willFuncBecomeRecursive } from './src/problem-checker.js';
 import { setupInspector } from './src/inspector.js';
 import { showFunctionInspector } from './src/function-inspector.js';
 import { showModuleInspector } from './src/module-inspector.js';
@@ -50,6 +49,7 @@ const DEFAULT_ALLOWED_TYPES = ['int', 'float', 'str', 'bool', 'list', 'tuple', '
  * @param {number} options.minParamDescLength - Minimum length of parameter description (for validation), defaults to 10
  * @param {number} options.minReturnDescLength - Minimum length of return description (for validation), defaults to 10
  * @param {boolean} options.adminMode - If true, enables admin mode features (nothing is read-only or not shown, allows editing read-only properties)
+ * @param {boolean} options.callGraphOnly - If true, hides the module and function inspectors, only shows the call graph (and suppresses most problem checking)
  */
 export default function init(
     rootElem,
@@ -69,6 +69,7 @@ export default function init(
         minParamDescLength=10,
         minReturnDescLength=10,
         adminMode=false,
+        callGraphOnly=false,
     } = options;
 
     rootElem.classList.add("func-planner");
@@ -100,6 +101,7 @@ export default function init(
     diagram.minParamDescLength = minParamDescLength;
     diagram.minReturnDescLength = minReturnDescLength;
     diagram.adminMode = adminMode;
+    diagram.callGraphOnly = callGraphOnly;
 
     // Define themes
     diagram.themeManager.set('light', {
@@ -122,7 +124,7 @@ export default function init(
             'bg-undefined': '#ff0000', // for debugging
         },
         fonts: {
-            text: '14px monospace', // 0.875rem - using a rem unit messes up rendering
+            text: "14px 'Monaco', 'Menlo', 'Ubuntu Mono', monospace", // 0.875rem - using a rem unit messes up rendering
             title: '2.5rem InterVariable, sans-serif',
         }
     });
@@ -172,14 +174,7 @@ export default function init(
                 .bind('fromLinkable', 'readOnly', (ro) => !isCallsOutOfRO(ro))
                 .bind('cursor', 'readOnly', (ro) => isCallsOutOfRO(ro) ? 'pointer' : 'crosshair')
                 .bind('toLinkable', 'readOnly', (ro) => !isCallsIntoRO(ro)),
-            new go.TextBlock("", {
-                isMultiline: false,
-                editable: false,
-                margin: new go.Margin(10, 6, 6, 6),
-                cursor: 'pointer',
-            })
-                .theme('stroke', 'stroke').theme('font', 'text')
-                .bind('text', '', (data) => `${data.name || `function${data.key}`}()`),
+            makeNameEditor()
         ),
     )
     .theme('shadowColor', 'shadow')
@@ -210,27 +205,25 @@ export default function init(
         layerName: 'Background',
         doubleClick: (e, link) => {
             // Reverse the link direction on double-click
-            diagram.startTransaction('reverse link');
             const from = link.fromNode;
             const to = link.toNode;
+            // TODO: more checks? link already exists? recursive?
+            if (isCallsIntoRO(from.data.readOnly) || isCallsOutOfRO(to.data.readOnly)) { return false; }
+            diagram.startTransaction('reverse link');
             link.fromNode = to;
             link.toNode = from;
             diagram.commitTransaction('reverse link');
+            updateAllProblems(diagram);
         },
     }).add(
         new go.Shape({ strokeWidth: 2 }).themeData('stroke', 'linkProblems', null, strokeColor),
         new go.Shape({ toArrow: 'Standard', scale: 1.4, stroke: null })
             .themeData('fill', 'linkProblems', null, strokeColor)
     );
-    // Optionally add the AvoidsLinksRouter if available
-    try {
-        // TODO: make the vertical links work better with the LayeredDigraphLayout
-        const router = new AvoidsLinksRouter();
-        router.linkSpacing = 10;
-        diagram.routers.add(router);
-    } catch (e) {
-        console.error("Failed to add optional AvoidsLinksRouter:", e);
-    }
+    // TODO: make the vertical links work better with the LayeredDigraphLayout
+    const router = new AvoidsLinksRouter();
+    router.linkSpacing = 10;
+    diagram.routers.add(router);
     diagram.toolManager.relinkingTool.fromHandleArchetype = new go.Shape('Diamond',
         { width: 12, height: 12, segmentIndex: 0, cursor: 'pointer' }).theme('fill', 'selection-trans');
     diagram.toolManager.relinkingTool.toHandleArchetype = new go.Shape('Diamond',
@@ -263,21 +256,23 @@ export default function init(
     setupProblemChecking(diagram);
 
     // Show the appropriate inspector based on selection
-    const inspectorDiv = setupInspector(diagram);
-    diagram.addDiagramListener('ChangedSelection', (e) => {
-        let subject = e.subject.first();
-        if (subject instanceof go.Link) {
-            return; // keep same
-            //subject = subject.fromNode; // show the fromNode of the link
-            //showModuleInspector(diagram, inspectorDiv); // show module inspector
-        }
-        if (!subject) {
-            showModuleInspector(diagram, inspectorDiv);
-        } else {
-            showFunctionInspector(diagram, inspectorDiv, subject);
-        }
-    });
-    showModuleInspector(diagram, inspectorDiv);
+    if (!diagram.callGraphOnly) {
+        const inspectorDiv = setupInspector(diagram);
+        diagram.addDiagramListener('ChangedSelection', (e) => {
+            let subject = e.subject.first();
+            if (subject instanceof go.Link) {
+                return; // keep same
+                //subject = subject.fromNode; // show the fromNode of the link
+                //showModuleInspector(diagram, inspectorDiv); // show module inspector
+            }
+            if (!subject) {
+                showModuleInspector(diagram, inspectorDiv);
+            } else {
+                showFunctionInspector(diagram, inspectorDiv, subject);
+            }
+        });
+        showModuleInspector(diagram, inspectorDiv);
+    }
 }
 
 function createToolTip(rootElem) {

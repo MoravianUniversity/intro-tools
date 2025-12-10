@@ -11,7 +11,9 @@ div:where(.swal2-container) img:where(.swal2-image) { margin: 2em auto 0 !import
     --placeholder-color: #6b7280;          /* gray-500 */
     --stroke-color: var(--text-color);
     --error-color: #dc2626;
+    --error-stroke: var(--error-color);
     --warning-color: #f6af00;
+    --warning-stroke: #f59e0b;
     --warning-contrast-color: rgb(0, 0, 0, 0.0);
     --shadow-color: #9ca3af;               /* gray-400 */
 
@@ -65,6 +67,46 @@ div:where(.swal2-container) img:where(.swal2-image) { margin: 2em auto 0 !import
 .func-planner input, .func-planner textarea { box-sizing: border-box; }
 .func-planner .diagram { position: relative; font-size: 1rem; width: 100%; height: 100%; overflow: hidden; background-color: var(--diagram-background-color); }
 .func-planner .diagram.func-planner-drag-over { background-color: var(--diagram-background-color-drag-over) !important; }
+.func-planner .function-name-editor {
+    display: inline-block;
+    position: absolute;
+    z-index: 100;
+    font: 14px 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+    transform-origin: top left;
+    color: var(--text-color);
+    overflow: visible;
+    padding: 6px;
+    border: 2px solid var(--stroke-color);
+    border-radius: 7px;
+    box-shadow: 0px 0px 10px var(--stroke-color);
+    input {
+        font: inherit;
+        margin: 0; padding: 0; inset: 0;
+        position: absolute;
+        width: 100%; left: 6px;
+        border: none; outline: none;
+        color: inherit; background-color: transparent; border-radius: inherit;
+    }
+    input::placeholder { color: var(--placeholder-color); opacity: 1; font-style: italic; }
+    span.ghost { visibility: hidden; height: 0; white-space: pre; }
+}
+.func-planner .function-name-editor.error {
+    border-color: var(--error-stroke);
+    box-shadow: 0 0 10px var(--error-stroke);
+}
+.func-planner .function-name-editor.warning {
+    border-color: var(--warning-stroke);
+    box-shadow: 0 0 10px var(--warning-stroke);
+}
+
+.func-planner .function-name-editor::after {
+    content: '()';
+    position: relative;
+    right: 0;
+}
+.func-planner .function-name-editor:has(input[value=""])::after { /* does not work */
+    color: var(--placeholder-color); opacity: 1; font-style: italic;
+}
 
 .func-planner .func-planner-widgets {
     position: absolute;
@@ -261,7 +303,7 @@ div:where(.swal2-container) img:where(.swal2-image) { margin: 2em auto 0 !import
     h2 { font-size: 1.18em; margin: 0; border-bottom: 2px solid var(--text-color); margin: 0; }
     h3 { font-size: 1.1em; margin-bottom: 0; }
     
-    input.func-name { font-family: monospace; font-size: 1.18em; width: 100%; border: 1px solid transparent; }
+    input.func-name { font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace; font-size: 1.18em; width: 100%; border: 1px solid transparent; }
     textarea { width: 100%; min-height: 3.75em; resize: vertical; }
     input:read-only, textarea:read-only { background-color: transparent; border: 1px solid transparent; }
 
@@ -272,7 +314,7 @@ div:where(.swal2-container) img:where(.swal2-image) { margin: 2em auto 0 !import
     input.warning, textarea.warning, select.warning { background-color: rgb(from var(--warning-color) r g b / 0.2); border: 1px solid var(--warning-color) !important; accent-color: var(--warning-color); }
     input.error, textarea.error, select.error { background-color: rgb(from var(--error-color) r g b / 0.2); border: 1px solid var(--error-color) !important; accent-color: var(--error-color); }
     select.func-io { field-sizing: content; }
-    .func-code-box textarea { font-family: monospace; font-size: 0.9em; white-space: pre; tab-size: 4; }
+    .func-code-box textarea { font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace; font-size: 0.9em; white-space: pre; tab-size: 4; }
     .func-code-box textarea::placeholder { color: #aaa; }
     .func-code-box label, label:has(textarea) {
         font-weight: bold; display: block; margin-bottom: 0.25em; margin-top: 1em; font-size: 1.1em;
@@ -304,9 +346,9 @@ div:where(.swal2-container) img:where(.swal2-image) { margin: 2em auto 0 !import
     .func-var { margin: 0.75em 0; padding: 0.5em; padding-left: 0.6em; border: 1px solid var(--stroke-color); border-radius: 0.5em; background-color: var(--insp-var-background-color); position: relative; box-shadow: 0 0 0.5em var(--shadow-color); }
     .func-var-name {
         @supports not (field-sizing: content) { width: 12em; } /* fallback for Firefox and Safari */
-        font-family: monospace;
+        font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
     }
-    .func-var-type { font-family: monospace; }
+    .func-var-type { font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;; }
     .func-var-desc { width: 100%; display: inline-block; }
     .func-vars >div:not(.func-var-button):not(:has(.func-var))::after { content: "None"; display: block; height: 0em; }
     .func-vars {
