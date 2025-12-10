@@ -11,8 +11,6 @@
  *  - saveJSON(diagram, includeProblems=false)
  *  - loadJSON(diagram)
  *  - importJSON(diagram)
- 
- * TODO: need to document all exported functions
  */
 
 import { GraphLinksModel } from 'gojs';
@@ -198,6 +196,15 @@ function getParam(param, i, withTypes=true) {
     if (!withTypes || !param.type) { return name; }
     return `${name}: ${typeToPython(param.type)}`;
 }
+/**
+ * Generates a Python function definition line.
+ * @param {string} name The function name.
+ * @param {*} params The function parameters.
+ * @param {*} returns The function return types.
+ * @param {boolean} withTypes Whether to include type annotations.
+ * @param {boolean} simple Whether to generate a simple def line without the "def" keyword and colon.
+ * @returns {string} The Python function def line.
+ */
 export function pythonDefLine(name, params, returns, withTypes=true, simple=false) {
     const paramsDef = params.map((p, i) => getParam(p, i, withTypes));
     let returnDef = "";
@@ -273,6 +280,11 @@ function generatePythonTemplate(diagram, withTypes=true) {
     }
     return text;
 }
+/**
+ * Exports the diagram to a Python template and copies it to the clipboard.
+ * @param {*} diagram 
+ * @param {boolean} withTypes Whether to include type annotations.
+ */
 export function exportToPython(diagram, withTypes=true) {
     const text = generatePythonTemplate(diagram, withTypes);
     copyToClipboard(text);
@@ -299,6 +311,10 @@ function generatePythonTests(diagram) {
     text += `if __name__ == '__main__':\n    pytest.main(["--no-header", "--tb=short"])\n`;
     return text;
 }
+/**
+ * Exports the diagram to a Python test template and copies it to the clipboard.
+ * @param {*} diagram 
+ */
 export function exportPythonTests(diagram) {
     const text = generatePythonTests(diagram);
     copyToClipboard(text);
@@ -349,6 +365,11 @@ function mergeModel(diagram, model) {
     diagram.model.addLinkDataCollection(model.calls);
     updateAllProblems(diagram);
 }
+/**
+ * Reset the diagram to the initial model.
+ * @param {*} diagram 
+ * @param {boolean} confirm Whether to show a confirmation dialog.
+ */
 export function reset(diagram, confirm=true) {
     if (confirm) {
         confirmDialog("Reset to Default?", "Are you sure you want to load the default functions for this plan? This will clear the current plan.",
@@ -376,6 +397,11 @@ function getModel(diagram, includeProblems=false) {
     }
     return output;
 }
+/**
+ * Save the diagram as JSON and copy it to the clipboard.
+ * @param {*} diagram 
+ * @param {boolean} includeProblems Whether to include problem data in the saved JSON.
+ */
 export function saveJSON(diagram, includeProblems=false) {
     const model = getModel(diagram, includeProblems);
     const json = JSON.stringify(model, null, 2);
@@ -390,6 +416,10 @@ export function saveJSON(diagram, includeProblems=false) {
         showCloseButton: true,
     });
 }
+/**
+ * Load JSON data into the diagram, replacing the current model.
+ * @param {*} diagram 
+ */
 export function loadJSON(diagram) {
     Swal.fire({
         theme: diagram.themeManager.currentTheme,
@@ -411,6 +441,10 @@ export function loadJSON(diagram) {
         loadJSONString(diagram, result.value, false);
     });
 }
+/**
+ * Import JSON data into the diagram, "merging" with the current model.
+ * @param {*} diagram 
+ */
 export function importJSON(diagram) {
     Swal.fire({
         theme: diagram.themeManager.currentTheme,
