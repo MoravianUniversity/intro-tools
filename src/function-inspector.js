@@ -96,28 +96,39 @@ function makeFuncName(diagram, data, update, end, inspectorDiv) {
     const input = document.createElement('input');
     input.type = 'text';
     input.className = 'func-name';
-    input.placeholder = 'Function Name';
+    input.placeholder = 'function';
     input.required = true;
     input.pattern = '[a-zA-Z_][a-zA-Z0-9_]*';
     input.value = data.name || '';
     input.readOnly = !diagram.adminMode && isReadOnly(data, 'name');
 
+    // auto-resize the input box if field-sizing is not supported
+    let updateSize = () => { };
+    if (!CSS.supports("field-sizing: content")) {
+        updateSize = () => { input.size = (input.value || input.placeholder).length; }; // can do this because it uses a monospace font
+        input.addEventListener('input', updateSize);
+        setTimeout(updateSize, 0);
+    }
+
     input.addEventListener('input', (e) => {
         inspectorDiv.classList.toggle('is-main', e.target.value.trim() === 'main');
         update('name', createValidIdentifier(e.target.value));
+        updateSize();
     });
     input.addEventListener('blur', (e) => {
         inspectorDiv.classList.toggle('is-main', e.target.value.trim() === 'main');
         end('name', createValidIdentifier(e.target.value));
+        updateSize();
     });
 
     // listen for name external changes
-    diagram.model.addChangedListener((e) => {
-        if (e.isTransactionFinished && e.model === diagram.model) {
+    diagram.addModelChangedListener((e) => {
+        if (e.isTransactionFinished) {
             for (const change of e.object.changes) {
                 if (change.propertyName === 'name' && change.object === data) {
                     input.value = change.newValue || '';
                     inspectorDiv.classList.toggle('is-main', change.newValue === 'main');
+                    updateSize();
                 }
             }
         }

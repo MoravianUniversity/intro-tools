@@ -5,7 +5,6 @@
  *  - how to properly save module-level settings?
  *
  * Future ideas:
- *  - better display of the first line of the function (make it look like Python, text boxes that auto-resize)
  *  - some intiial model settings propagate into in-progress model without resetting? (i.e. new functions, into read-only functions, etc)
  *  - a few less parentheses in the type editor string generation (and can dicts nest?)
  *  - server side saving and loading of plans, collaboration, instructor side of things

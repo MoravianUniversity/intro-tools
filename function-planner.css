@@ -300,10 +300,20 @@ div:where(.swal2-container) img:where(.swal2-image) { margin: 2em auto 0 !import
     background-color: var(--tool-background-color);
     padding: 1em;
 
-    h2 { font-size: 1.18em; margin: 0; border-bottom: 2px solid var(--text-color); margin: 0; }
+    h2 { font-size: 1.4em; margin: 0; border-bottom: 2px solid var(--text-color); margin: 0; }
     h3 { font-size: 1.1em; margin-bottom: 0; }
     
-    input.func-name { font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace; font-size: 1.18em; width: 100%; border: 1px solid transparent; }
+    input.func-name { font-family: inherit; font-size: 1em; border: 1px solid transparent; font-weight: bold; }
+    h2:has(input.func-name)::before, h2:has(input.func-name)::after { font-size: 1em; }
+    h2:has(input.func-name)::before { content: 'def '; color:#C586C0; }
+    h2:has(input.func-name)::after { content: '()'; color:#D4D4D4; }
+    h2:has(input.func-name) {
+        field-sizing: content; /* needs a JS work-around in Firefox and other browsers since it is not supported */
+        font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+        font-weight: normal;
+        text-wrap: nowrap;
+    }
+
     textarea { width: 100%; min-height: 3.75em; resize: vertical; }
     input:read-only, textarea:read-only { background-color: transparent; border: 1px solid transparent; }
 
