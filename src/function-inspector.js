@@ -111,6 +111,18 @@ function makeFuncName(diagram, data, update, end, inspectorDiv) {
         end('name', createValidIdentifier(e.target.value));
     });
 
+    // listen for name external changes
+    diagram.model.addChangedListener((e) => {
+        if (e.isTransactionFinished && e.model === diagram.model) {
+            for (const change of e.object.changes) {
+                if (change.propertyName === 'name' && change.object === data) {
+                    input.value = change.newValue || '';
+                    inspectorDiv.classList.toggle('is-main', change.newValue === 'main');
+                }
+            }
+        }
+    });
+
     const h2 = document.createElement('h2');
     h2.appendChild(input);
     return h2;
