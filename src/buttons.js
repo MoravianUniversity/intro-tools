@@ -41,11 +41,9 @@ function makeWidgetButtons(diagram) {
     function addFunction() {
         let key = diagram.model.nodeDataArray.length + 1;
         while (diagram.model.findNodeDataForKey(key)) { key++; } // ensure unique key
-        diagram.model.addNodeData({
-            key: key, name: '', desc: '',
-            params: [], returns: [], io: "none",
-            readOnly: false, testable: false,
-        });
+        diagram.startTransaction(`add function ${key}`);
+        diagram.model.addNodeData({key: key, name: ''});
+        diagram.commitTransaction(`add function ${key}`);
     }
 
     addButton(holder, 'magnifier.svg', '', `Zoom to Fit (${ctrl}R)`, () => { diagram.zoomToFit(); });
