@@ -234,11 +234,12 @@ function pythonDocstring(desc, params, returns) {
 }
 function generatePythonTemplate(diagram, withTypes=true) {
     const model = diagram.model;
-    let text = `"""\n${model.documentation || DEFAULT_PROGRAM_HEADER}\n\nBy: ${model.authors || "TODO"}\n"""\n\n`;
-    if (model.globalCode) { text += `${model.globalCode}\n\n`; }
+    const data = model.modelData;
+    let text = `"""\n${data.documentation || DEFAULT_PROGRAM_HEADER}\n\nBy: ${data.authors || "TODO"}\n"""\n\n`;
+    if (data.globalCode) { text += `${data.globalCode}\n\n`; }
     let mainFunc = null;
     // TODO: sort?
-    for (const func of diagram.model.nodeDataArray) {
+    for (const func of model.nodeDataArray) {
         // Create the def line
         let name = func.name || `function${func.key}`;
         let params = func.params || [];
@@ -300,7 +301,8 @@ export function exportToPython(diagram, withTypes=true) {
 }
 function generatePythonTests(diagram) {
     const model = diagram.model;
-    let text = `"""\n${model.testDocumentation || "Tests for the " + diagram.planId + " module"}\n\nBy: ${model.authors || "TODO"}\n"""\n\nimport pytest\n\nimport ` + diagram.planId + `\n\n`;
+    const data = model.modelData;
+    let text = `"""\n${data.testDocumentation || "Tests for the " + diagram.planId + " module"}\n\nBy: ${data.authors || "TODO"}\n"""\n\nimport pytest\n\nimport ` + diagram.planId + `\n\n`;
     for (const func of model.nodeDataArray) {
         if (func.testable) {
             text += `def test_${func.name}():\n`;
@@ -343,13 +345,11 @@ function confirmDialog(title, text, confirmFunc, theme='auto') {
 }
 function rawSetModel(diagram, model) {
     diagram.model = new GraphLinksModel(model.functions, model.calls);
-    diagram.model.documentation = model.documentation ?? '';
-    diagram.model.testDocumentation = model.testDocumentation ?? '';
-    diagram.model.globalCode = model.globalCode ?? '';
-    diagram.model.readOnly = model.readOnly || false;
-    diagram.model.authors = model.authors ?? '';
-    if (model.showTestDocumentation) { diagram.model.showTestDocumentation = model.showTestDocumentation; }
-    if (model.showGlobalCode) { diagram.model.showGlobalCode = model.showGlobalCode; }
+    for (const key of Object.keys(model)) {
+        if (key !== 'functions' && key !== 'calls') {
+            diagram.model.modelData[key] = model[key];
+        }
+    }
 }
 function setModel(diagram, model) {
     if (!model.functions || !model.calls) { return "Invalid model format. Expected 'functions' and 'calls' keys."; }
@@ -377,25 +377,21 @@ export function reset(diagram, confirm=true) {
     } else { setModel(diagram, dup(diagram.initialModel)); }
 }
 
-function removeProblems(array) {
-    return array.map(item => {
-        let data = { ...item };
-        delete data.problems;
-        delete data.linkProblems;
-        return data;
-    });
+function removeProblems(item) {
+    let data = { ...item };
+    delete data.problems;
+    delete data.linkProblems;
+    return data;
+}
+function removeAllProblems(array) {
+    return array.map(removeProblems);
 }
 function getModel(diagram, includeProblems=false) {
     const model = diagram.model;
-    const functions = includeProblems ? model.nodeDataArray : removeProblems(model.nodeDataArray);
-    const calls = includeProblems ? model.linkDataArray : removeProblems(model.linkDataArray);
-    const output = { functions, calls }
-    for (const key of ['documentation', 'testDocumentation', 'globalCode', 'readOnly', 'authors', 'showTestDocumentation', 'showGlobalCode']) {
-        if (model[key]) {
-            output[key] = model[key];
-        }
-    }
-    return output;
+    const data = includeProblems ? model.modelData : removeProblems(model.modelData);
+    const functions = includeProblems ? model.nodeDataArray : removeAllProblems(model.nodeDataArray);
+    const calls = includeProblems ? model.linkDataArray : removeAllProblems(model.linkDataArray);
+    return { functions, calls, ...data };
 }
 /**
  * Save the diagram as JSON and copy it to the clipboard.

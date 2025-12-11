@@ -8,22 +8,22 @@ import { modelProblems } from './problem-checker.js';
 import { DEFAULT_PROGRAM_HEADER } from './save-load.js';
 
 export function showModuleInspector(diagram, inspectorDiv) {
-    const data = diagram.model;
+    const model = diagram.model;
+    const data = model.modelData;
 
     function updateProblems(fix = false, key = null) {
         const problems = modelProblems(diagram);
-        data.problems = problems; // TODO: diagram.model.setDataProperty(data, 'problems', problems);
+        model.setDataProperty(data, 'problems', problems);
         updateProblemsInInspector(inspectorDiv, problems);
     }
 
     function setValue(key, value, fix=false) {
-        data[key] = value; // TODO: diagram.model.setDataProperty(data, key, value);
+        model.setDataProperty(data, key, value);
         updateProblems(fix, key);
     }
 
     function set(key, value) {
-        // TODO: diagram.commit((d) => { ... }, `${key} changed`);
-        if (data[key] !== value) { setValue(key, value, true); }
+        diagram.commit((d) => { if (data[key] !== value) { setValue(key, value, true); } }, `${key} changed`);
     }
 
     let currentTransaction = null;
@@ -31,9 +31,8 @@ export function showModuleInspector(diagram, inspectorDiv) {
         if (data[key] !== value || fix) {
             // make sure there is a transaction in progress
             if (currentTransaction !== key) {
-                // TODO:
-                //if (currentTransaction) { diagram.commitTransaction(`${currentTransaction} changed`); }
-                //diagram.startTransaction(`${key} changed`);
+                if (currentTransaction) { diagram.commitTransaction(`${currentTransaction} changed`); }
+                diagram.startTransaction(`${key} changed`);
                 currentTransaction = key;
             }
 
@@ -44,7 +43,7 @@ export function showModuleInspector(diagram, inspectorDiv) {
     function end(key, value) {
         update(key, value, true);
         if (currentTransaction === key) {
-            // TODO: diagram.commitTransaction(`${key} changed`);
+            diagram.commitTransaction(`${key} changed`);
             currentTransaction = null;
         }
     }
@@ -53,8 +52,8 @@ export function showModuleInspector(diagram, inspectorDiv) {
     makeHeader(diagram, inspectorDiv);
     inspectorDiv.appendChild(makeModuleDesc(diagram, data, update, end));
     inspectorDiv.appendChild(makeAuthorNames(diagram, data, update, end));
-    const hasTestable = diagram.model.nodeDataArray.some(n => n.testable);
-    if (hasTestable && (diagram.showTestDocumentation || diagram.adminMode)) {
+    const hasTestable = model.nodeDataArray.some(n => n.testable);
+    if (hasTestable && (data.showTestDocumentation || diagram.adminMode)) {
         inspectorDiv.appendChild(makeTestDocumentation(diagram, data, update, end));
         if (diagram.adminMode) {
             inspectorDiv.appendChild(makeShowTestDocumentationCheckbox(diagram, data, set));

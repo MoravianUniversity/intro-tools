@@ -89,7 +89,7 @@ export function updateAllProblems(diagram) {
             model.setDataProperty(link.data, 'linkProblems', linkProblems(link));
         }
     }
-    model.problems = modelProblems(diagram); // TODO: set data property?
+    model.setDataProperty(model.modelData, 'problems', modelProblems(diagram));
     modelLinkProblems(diagram); // updates problems directly
 }
 
@@ -111,6 +111,7 @@ export function modelProblems(diagram) {
     const minTestable = diagram.minTestable ?? 0;
 
     const model = diagram.model;
+    const data = model.modelData;
     const nodes = model.nodeDataArray;
     const problems = [];
 
@@ -121,8 +122,8 @@ export function modelProblems(diagram) {
 
     // Check for module documentation
     if (!diagram.callGraphOnly) {
-        const docLen = (model.documentation || '').trim().length;
-        if (!model.documentation || docLen === 0) {
+        const docLen = (data.documentation || '').trim().length;
+        if (docLen === 0) {
             problems.push(["error", "documentation", "Module documentation is missing."]);
         } else if (docLen < (diagram.minModuleDescLength ?? 25)) {
             problems.push(["warning", "documentation", "Module documentation is too short."]);
@@ -131,10 +132,10 @@ export function modelProblems(diagram) {
 
     // Check for author names
     if (!diagram.callGraphOnly) {
-        const authors = (model.authors || '').trim();
-        if (!model.authors || authors.length === 0) {
+        const authorsLength = (data.authors || '').trim().length;
+        if (authorsLength === 0) {
             problems.push(["error", "authors", "Author name(s) are required."]);
-        } else if (authors.length < 3) {
+        } else if (authorsLength < 3) {
             problems.push(["warning", "authors", "Author name(s) seem too short."]);
         }
     }
