@@ -10,11 +10,10 @@ div:where(.swal2-container) img:where(.swal2-image) { margin: 2em auto 0 !import
     --text-color: #111827;                 /* gray-900 */
     --placeholder-color: #6b7280;          /* gray-500 */
     --stroke-color: var(--text-color);
-    --error-color: #dc2626;
-    --error-stroke: var(--error-color);
+    --error-color: #b61f1f;
+    --error-stroke: #dc2626;
     --warning-color: #f6af00;
     --warning-stroke: #f59e0b;
-    --warning-contrast-color: rgb(0, 0, 0, 0.0);
     --shadow-color: #9ca3af;               /* gray-400 */
 
     --bg-testable-color: #090;
@@ -32,11 +31,11 @@ div:where(.swal2-container) img:where(.swal2-image) { margin: 2em auto 0 !import
     --button-text-disabled-color: #6b7280;
     --button-icon-shadow: 2px 3px 1px rgba(20, 20, 20, .7);
 
-    --tool-background-color: #e5e7eb;      /* gray-200 */
+    --tool-background-color: #eceef1;      /* gray-150 */
     --tooltip-background-color: var(--tool-background-color);
     --insp-vars-background-color: #d1d5db; /* gray-300 */
     --insp-var-background-color: #9ca3af;  /* gray-400 */
-    --insp-var-ghost-color: #e5e7eb;       /* gray-200 */
+    --insp-var-ghost-color: #eceef1;       /* gray-150 */
     --insp-var-input-border-color: #555;
 
     color: var(--text-color);
@@ -47,8 +46,8 @@ div:where(.swal2-container) img:where(.swal2-image) { margin: 2em auto 0 !import
 
     --text-color: #e5e7eb;                 /* gray-200 */
     --placeholder-color: #b6bcc5;          /* gray-350 */
+    --error-color: #dc2626;
     --warning-color: #ffd600;
-    /* --warning-contrast-color: transparent; */
     --shadow-color: #6b7280;               /* gray-500 */
 
     --bg-indirect-color: #374151;          /* gray-700 */
@@ -245,28 +244,35 @@ div:where(.swal2-container) img:where(.swal2-image) { margin: 2em auto 0 !import
     margin: 0;
     list-style: none;
 }
+.func-planner ul.problems li {
+    padding: 0.1em 0.3em;
+    border: 1px solid var(--text-color);
+    border-radius: 0.3em;
+}
 .func-planner ul.problems li:before {
     position: relative;
     display: inline-block;
     width: 0;
-    left: -1.3em;
-}
-.func-planner ul.problems li.error { color: var(--error-color); }
-.func-planner ul.problems li.error:before { content: "❗"; }
-.func-planner ul.problems li.warning {
-    color: var(--warning-color);
-    /* -webkit-text-stroke: 0.6px var(--warning-contrast-color); */
+    left: -1.6em;
+    /* text-shadow is an alternative for
+    -webkit-text-stroke: 1.2px var(--text-color);
+    paint-order: stroke fill;
+    since that doesn't work for emojis in some browsers
+    */
     text-shadow:
-        1px 1px 0 var(--warning-contrast-color),
-        -1px -1px 0 var(--warning-contrast-color),
-        -1px 1px 0 var(--warning-contrast-color),
-        1px -1px 0 var(--warning-contrast-color),
-        1px 0 0 var(--warning-contrast-color),
-        -1px 0 0 var(--warning-contrast-color),
-        0 1px 0 var(--warning-contrast-color),
-        0 -1px 0 var(--warning-contrast-color)
+        1px 1px 0 var(--text-color),
+        -1px -1px 0 var(--text-color),
+        -1px 1px 0 var(--text-color),
+        1px -1px 0 var(--text-color),
+        1px 0 0 var(--text-color),
+        -1px 0 0 var(--text-color),
+        0 1px 0 var(--text-color),
+        0 -1px 0 var(--text-color)
         ;
 }
+.func-planner ul.problems li.error { background-color: var(--error-stroke); }
+.func-planner ul.problems li.error:before { content: "❗"; }
+.func-planner ul.problems li.warning { background-color: var(--warning-stroke); }
 .func-planner ul.problems li.warning:before { content: "⚠️"; }
 
 .func-planner .tooltip-content {
@@ -305,8 +311,8 @@ div:where(.swal2-container) img:where(.swal2-image) { margin: 2em auto 0 !import
     
     input.func-name { font-family: inherit; font-size: 1em; border: 1px solid transparent; font-weight: bold; }
     h2:has(input.func-name)::before, h2:has(input.func-name)::after { font-size: 1em; }
-    h2:has(input.func-name)::before { content: 'def '; color:#C586C0; }
-    h2:has(input.func-name)::after { content: '()'; color:#D4D4D4; }
+    /* h2:has(input.func-name)::before { content: 'def '; color:#C586C0; } */
+    h2:has(input.func-name)::after { content: '()'; color:#bbbbbb; }
     h2:has(input.func-name) {
         field-sizing: content; /* needs a JS work-around in Firefox and other browsers since it is not supported */
         font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
@@ -333,6 +339,7 @@ div:where(.swal2-container) img:where(.swal2-image) { margin: 2em auto 0 !import
 
     label:has(.func-testable:not(:checked)) ~ .func-code-box:has(.func-testCode) { display: none; }
     label:has(.func-testable:checked) ~ .func-code-box:has(.func-testCode) { display: block; }
+    label:has(input[class*="func-show"]) { margin-top: 0; font-size: 0.8em; font-weight: normal; span { font-weight: normal; } }
 
     /* Function admin mode options */
     label:has(.func-authors) span { width: 2em; }
@@ -433,7 +440,7 @@ div:where(.swal2-container) img:where(.swal2-image) { margin: 2em auto 0 !import
     .func-var-button-add { color: #66aa66; right: 2.5em; }
 }
 
-.func-planner .inspector.is-main {
+.func-planner .inspector .is-main {
     .func-desc { display: none; }
     .func-params { display: none; }
     .func-returns { display: none; }
