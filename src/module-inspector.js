@@ -3,108 +3,99 @@
  * when no function is selected.
  */
 
-import { wrapWithLabel, makeCheckbox, makeTextarea, makeReadOnlySelect, makeCodeEditorWithShowCheckbox, updateProblemsInInspector } from './inspector.js';
-import { modelProblems } from './problem-checker.js';
+import { wrapWithLabel, makeCheckbox, makeTextarea, makeReadOnlySelect, makeCodeEditorWithShowCheckbox, makeProblemsDiv, isReadOnly } from './inspector.js';
 import { DEFAULT_PROGRAM_HEADER } from './save-load.js';
 
-export function showModuleInspector(diagram, inspectorDiv) {
-    const model = diagram.model;
-    const data = model.modelData;
+/**
+ * Creates the module inspector div.
+ * @param {*} model 
+ * @param {object} options 
+ * @returns {HTMLElement} the module inspector div
+ */
+export function makeModuleInspector(model, options) {
+    const div = document.createElement('div');
 
-    function updateProblems(fix = false, key = null) {
-        const problems = modelProblems(diagram);
-        model.setDataProperty(data, 'problems', problems);
-        updateProblemsInInspector(inspectorDiv, problems);
-    }
-
-    function setValue(key, value, fix=false) {
-        model.setDataProperty(data, key, value);
-        updateProblems(fix, key);
-    }
-
-    function set(key, value) {
-        diagram.commit((d) => { if (data[key] !== value) { setValue(key, value, true); } }, `${key} changed`);
-    }
-
-    let currentTransaction = null;
-    function update(key, value, fix = false) {
-        if (data[key] !== value || fix) {
-            // make sure there is a transaction in progress
-            if (currentTransaction !== key) {
-                if (currentTransaction) { diagram.commitTransaction(`${currentTransaction} changed`); }
-                diagram.startTransaction(`${key} changed`);
-                currentTransaction = key;
-            }
-
-            // update the value
-            setValue(key, value, fix);
+    function set(property, value, cursorPos=null) { model.updateModelData(property, value, cursorPos); }
+    function listen(property, listener) { model.addModelDataListener(property, (_, value) => listener(value)); }
+    function listenRO(property, listener) {
+        if (options.adminMode) { listener(false); }
+        else {
+            model.addModelDataListener('readOnly', (_, value) => {
+                listener(isReadOnly(value ?? false, property));
+            });
         }
     }
-    function end(key, value) {
-        update(key, value, true);
-        if (currentTransaction === key) {
-            diagram.commitTransaction(`${key} changed`);
-            currentTransaction = null;
-        }
-    }
+    const funcs = {set, listen, listenRO};
 
-    inspectorDiv.innerHTML = '';
-    makeHeader(diagram, inspectorDiv);
-    inspectorDiv.appendChild(makeModuleDesc(diagram, data, update, end));
-    inspectorDiv.appendChild(makeAuthorNames(diagram, data, update, end));
-    const hasTestable = model.nodeDataArray.some(n => n.testable);
-    if (hasTestable && (data.showTestDocumentation || diagram.adminMode)) {
-        inspectorDiv.appendChild(makeTestDocumentation(diagram, data, update, end));
-        if (diagram.adminMode) {
-            inspectorDiv.appendChild(makeShowTestDocumentationCheckbox(diagram, data, set));
-        }
+    div.append(
+        ...makeHeader(model),
+        makeModuleDesc(funcs),
+        makeAuthorNames(funcs),
+        makeTestDocumentation(model, options, funcs)
+    );
+    if (options.adminMode) {
+        div.appendChild(makeShowTestDocumentationCheckbox(funcs));
     }
-    makeCodeEditorWithShowCheckbox(inspectorDiv, diagram, data, 'globalCode', update, end, set,
-        'Global Code', '# Write your module-level code here (e.g. imports)\n');
-    if (diagram.adminMode) {
-        inspectorDiv.appendChild(makeReadOnlySelect(diagram, data, set,
+    div.appendChild(makeGlobalCodeEditor(options, funcs));
+    if (options.adminMode) {
+        div.appendChild(makeReadOnlySelect(funcs,
             ['documentation', 'testDocumentation', 'globalCode']));
     }
-    const problemsDiv = document.createElement('div');
-    problemsDiv.className = 'problems';
-    inspectorDiv.appendChild(problemsDiv);
-    updateProblems();
+    div.appendChild(makeProblemsDiv((listener) => model.addModelDataListener('problems', listener)));
+
+    model.fireModelDataListeners();
+
+    return div;
 }
 
-function makeHeader(diagram, inspectorDiv) {
+function makeHeader(model) {
     const title = document.createElement('h2');
-    title.textContent = (diagram.planId || 'Module');
-    inspectorDiv.appendChild(title);
+    title.textContent = (model.id || 'Module');
     const info = document.createElement('p');
     info.textContent = 'Select a function to edit it.\nEdit program-wide settings here.';
-    inspectorDiv.appendChild(info);
+    return [title, info];
 }
 
-function makeModuleDesc(diagram, data, update, end) {
-    const textarea = makeTextarea(diagram, data, 'documentation', update, end, DEFAULT_PROGRAM_HEADER);
-    textarea.required = true;
-    return textarea;
+function makeModuleDesc(funcs) {
+    return makeTextarea('documentation', funcs,
+        {placeholder: DEFAULT_PROGRAM_HEADER, required: true});
 }
 
-function makeAuthorNames(diagram, data, update, end) {
+function makeAuthorNames(funcs) {
     const input = document.createElement('input');
     input.type = 'text';
     input.className = 'func-authors';
     input.placeholder = 'Authors...';
-    input.value = data.authors || '';
     input.required = true;
-    input.addEventListener('input', (e) => { update('authors', e.target.value); });
-    input.addEventListener('blur', (e) => { end('authors', e.target.value); });
+    input.addEventListener('input', (e) => { funcs.set('authors', e.target.value, e.target.selectionStart); });
+    funcs.listen('authors', (value) => {
+        value = value ?? '';
+        if (input.value !== value) { input.value = value; }
+    });
+    funcs.listenRO('authors', (value) => { input.readOnly = value; });
     return wrapWithLabel(input, 'By:');
 }
 
-function makeTestDocumentation(diagram, data, update, end) {
-    return wrapWithLabel(
-        makeTextarea(diagram, data, 'testDocumentation', update, end, "Tests for the " + diagram.planId + " module"),
-        'Test Documentation'
-    );
+function makeTestDocumentation(model, options, funcs) {
+    const textarea = makeTextarea('testDocumentation', funcs,
+            {placeholder: `Tests for the "${model.id}" module`});
+    const label = wrapWithLabel(textarea, 'Test Documentation');
+    if (!options.adminMode) {
+        function toggleShowing() {
+            const hasTestable = Array.from(model.functions.values()).some(n => n.get('testable'));
+            label.style.display = hasTestable && model.modelData.get('showTestDocumentation') ? '' : 'none';
+        }
+        funcs.listen('showTestDocumentation', toggleShowing);
+        model.addFuncListener('testable', toggleShowing);
+    }
+    return label;
 }
 
-function makeShowTestDocumentationCheckbox(diagram, data, set) {
-    return wrapWithLabel(makeCheckbox(diagram, data, 'showTestDocumentation', set), 'Show Test Documentation: ');
+function makeShowTestDocumentationCheckbox(funcs) {
+    return wrapWithLabel(makeCheckbox('showTestDocumentation', funcs), 'Show Test Documentation: ');
+}
+
+function makeGlobalCodeEditor(options, funcs) {
+    return makeCodeEditorWithShowCheckbox(options, 'globalCode', funcs,
+        'Global Code', '# Write your module-level code here (e.g. imports)\n');
 }

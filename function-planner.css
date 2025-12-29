@@ -321,7 +321,7 @@ div:where(.swal2-container) img:where(.swal2-image) { margin: 2em auto 0 !import
     }
 
     textarea { width: 100%; min-height: 3.75em; resize: vertical; }
-    input:read-only, textarea:read-only { background-color: transparent; border: 1px solid transparent; }
+    input:read-only, textarea:read-only, select:disabled { background-color: transparent; border: 1px solid transparent; }
 
     /*:invalid, :user-invalid { background-color: rgb(from var(--error-color) r g b / 0.2) !important; border: 1px solid var(--error-color) !important; }*/
     input, textarea, select { border: 1px solid var(--insp-var-input-border-color); background-color: var(--tool-background-color); color: var(--text-color); }
@@ -419,17 +419,19 @@ div:where(.swal2-container) img:where(.swal2-image) { margin: 2em auto 0 !import
         > .func-var-button-add { top: unset; bottom: 0.75em; right: 3em !important; }
         /* > .func-var-button-add:last-child { position: static; } */
         .sortable-drag .func-var-button { display: none; }
+        .func-var-button-disabled { display: none;}
 
         /* Drag Handle */
-        .func-var-drag-handle {
+        .func-var:not(.func-var-readonly) .func-var-drag-handle {
             position: absolute;
             top: 0.8em; bottom: 0.8em;
             left: 0; width: 0.6em;
             cursor: ns-resize;
             z-index: 120;
         }
-        .func-var:hover .func-var-drag-handle { background: url("images/drag-dots.svg") center/0.8em no-repeat; }
+        .func-var:not(.func-var-readonly):hover .func-var-drag-handle { background: url("images/drag-dots.svg") center/0.8em no-repeat; }
     }
+    .func-vars.func-vars-readonly { padding-bottom: 0em; }
 
     label { display: block; }
     label:first-of-type { margin-top: 1em; }

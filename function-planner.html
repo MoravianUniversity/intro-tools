@@ -1,39 +1,26 @@
 <!DOCTYPE html>
 <html>
 <head>
+    <meta charset="UTF-8">
     <title>Function Planner</title>
     <style>
-        body {
-            margin: 0;
-            padding: 0;
-        }
+        body { margin: 0; padding: 0; }
         #planner {
             position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
+            top: 0; left: 0;
+            bottom: 0; right: 0;
             overflow: hidden;
         }
     </style>
-    <link rel="stylesheet" type="text/css" href="function-planner.css">
-    <script type="importmap">
-    {
-        "imports": {
-            "gojs": "https://unpkg.com/gojs@3.0.22/release/go.mjs",
-            "sortablejs": "https://cdn.jsdelivr.net/npm/sortablejs@1.15.6/modular/sortable.esm.js",
-            "sweetalert2": "https://unpkg.com/sweetalert2@11.22.0/dist/sweetalert2.esm.min.js"
-        }
-    }
-    </script>
-    <link rel="stylesheet" href="https://unpkg.com/sweetalert2@11.22.0/dist/sweetalert2.min.css">
     <script type="module">
     import init from "./function-planner.js";
     window.addEventListener('DOMContentLoaded', () => {
         init('planner', "default", {
             allowedTypes: ['int', 'float', 'str', 'bool', 'list', 'tuple', 'dict', 'set', 'custom'],
-            // minFunctions: 0,
-            // minTestable: 0
+            minFunctions: 5,
+            minTestable: 2,
+            adminMode: true,
+            // callGraphOnly: true,
         });
     });
     </script>

@@ -1,54 +1,27 @@
 /**
- * Functions for saving/loading the function planner diagram, either as JSON
+ * Functions for saving/loading the function planner model, either as JSON
  * or as Python code.
  * 
  * The exported functions are:
- *  - setupSaveLoad(diagram)
+ *  - setupDragAndDrop(model, options={}, div)
  *  - pythonDefLine(name, params, returns, withTypes=true, simple=false)
- *  - exportToPython(diagram, withTypes=true)
- *  - exportPythonTests(diagram)
- *  - reset(diagram, confirm=true)
- *  - saveJSON(diagram, includeProblems=false)
- *  - loadJSON(diagram)
- *  - importJSON(diagram)
+ *  - exportToPython(model, options, withTypes=true)
+ *  - exportPythonTests(model, options)
+ *  - reset(model, options, confirm=true)
+ *  - saveJSON(model, options, includeProblems=false)
+ *  - loadJSON(model, options)
+ *  - importJSON(model, options)
  */
 
 import { GraphLinksModel } from 'gojs';
 import Swal from 'sweetalert2';
 
-import { dup } from './utils.js';
-import { updateAllProblems } from './problem-checker.js';
-
 export const DEFAULT_PROGRAM_HEADER = "TODO: program header";
 const DRAG_OVER_CLASS = 'func-planner-drag-over';
-const LOCAL_STORAGE_KEY_PREFIX = 'func-planner-plan-';
-
-/**
- * Setup save/load functionality for the given diagram. This includes loading
- * from localStorage on startup, saving to localStorage on changes, and
- * enabling drag-and-drop loading of JSON files.
- * @param {*} diagram
- */
-export function setupSaveLoad(diagram) {
-    const model = (localStorage.getItem(`${LOCAL_STORAGE_KEY_PREFIX}${diagram.planId}`)) ?
-        JSON.parse(localStorage.getItem(`${LOCAL_STORAGE_KEY_PREFIX}${diagram.planId}`)) :
-        dup(diagram.initialModel);
-    rawSetModel(diagram, model);
-    diagram.addModelChangedListener((e) => {
-        // if (e.change === go.ChangeType.Transaction) {
-        //     console.log("Transaction", e.propertyName, e.oldValue);
-        // }
-        if (e.isTransactionFinished) {
-            //console.log("Saving model");
-            localStorage.setItem(`${LOCAL_STORAGE_KEY_PREFIX}${diagram.planId}`, JSON.stringify(getModel(diagram)));
-        }
-    });
-    setupDragAndDrop(diagram);
-}
 
 function copyToClipboard(text) {
     if (navigator.clipboard && window.isSecureContext) {
-        navigator.clipboard.writeText(textToCopy).then();
+        navigator.clipboard.writeText(text).then();
     } else {
         let textArea = document.createElement("textarea");
         textArea.value = text;
@@ -60,12 +33,12 @@ function copyToClipboard(text) {
 }
 
 function downloadDataAsFile(filename, text, mime='text/plain') {
-  const link = document.createElement('a');
-  link.href = 'data:' + mime + ';charset=utf-8,' + encodeURIComponent(text);
-  link.download = filename;
-  document.body.appendChild(link);
-  link.click();
-  document.body.removeChild(link);
+    const link = document.createElement('a');
+    link.href = 'data:' + mime + ';charset=utf-8,' + encodeURIComponent(text);
+    link.download = filename;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
 }
 
 function wrapText(text, width=80, indent=4) {
@@ -209,7 +182,7 @@ export function pythonDefLine(name, params, returns, withTypes=true, simple=fals
     const paramsDef = params.map((p, i) => getParam(p, i, withTypes));
     let returnDef = "";
     if (withTypes && returns.length > 0) {
-        const returnTypes = returns.map(ret => typeToPython(ret.type));
+        const returnTypes = returns.map(ret => ret.type ? typeToPython(ret.type) : "object");
         returnDef = " -> " + ((returns.length === 1) ? returnTypes[0] : `tuple[${returnTypes.join(", ")}]`);
     }
     const def = `${name}(${paramsDef.join(", ")})${returnDef}`;
@@ -232,35 +205,35 @@ function pythonDocstring(desc, params, returns) {
     docstring += `    """\n`;
     return docstring;
 }
-function generatePythonTemplate(diagram, withTypes=true) {
-    const model = diagram.model;
-    const data = model.modelData;
+function generatePythonTemplate(model, withTypes=true) {
+    const data = model.modelData.toJSON();
     let text = `"""\n${data.documentation || DEFAULT_PROGRAM_HEADER}\n\nBy: ${data.authors || "TODO"}\n"""\n\n`;
     if (data.globalCode) { text += `${data.globalCode}\n\n`; }
     let mainFunc = null;
     // TODO: sort?
-    for (const func of model.nodeDataArray) {
+    for (const [key, func] of model.functions.entries()) {
         // Create the def line
-        let name = func.name || `function${func.key}`;
-        let params = func.params || [];
-        let returns = func.returns || [];
+        const name = func.get("name")?.toString() || `function${key}`;
+        const params = func.get("params")?.toJSON() || [];
+        const returns = func.get("returns")?.toJSON() || [];
         let funcText = pythonDefLine(name, params, returns, withTypes) + "\n";
 
         // Create the docstring
-        let desc = func.desc || "";
+        const desc = func.get("desc")?.toString() || "";
         if (desc) { funcText += pythonDocstring(desc, params, returns); }
 
-        let code = func.code || "";
+        const code = func.get("code")?.toString() || "";
         if (code) {
             // Pre-provided code if available
             funcText += indentText(code, 4);
         } else {
             // Body comments
             funcText += "    # TODO: implement this function\n";
-            const node = diagram.findNodeForData(func);
-            const calls = Array.from(node.findNodesOutOf()).map(c => c.data.name || `function${c.data.key}`);
-            if (calls.length > 0) { funcText += `    # Calls ${calls.map(call => call + "()").join(", ")}\n`; }
-            let io = func.io || "none";
+            const calls = model.calledFunctions[key]?.map(
+                toKey => model.functions.get(toKey)?.get("name")?.toString() || `function${toKey}`
+            );
+            if (calls?.length > 0) { funcText += `    # Calls ${calls.map(call => call + "()").join(", ")}\n`; }
+            const io = func.get("io") || "none";
             if (io === "validation") { funcText += `    # Has direct user input that requires validation\n`; }
             else if (io === "input") { funcText += `    # Has direct user input\n`; }
             else if (io === "output") { funcText += `    # Has direct user output\n`; }
@@ -273,7 +246,7 @@ function generatePythonTemplate(diagram, withTypes=true) {
             }
         }
 
-        if (func.name === 'main') { mainFunc = funcText; }
+        if (name === 'main') { mainFunc = funcText; }
         else { text += funcText + "\n\n\n"; }
     }
     if (mainFunc) {
@@ -282,31 +255,32 @@ function generatePythonTemplate(diagram, withTypes=true) {
     return text;
 }
 /**
- * Exports the diagram to a Python template and copies it to the clipboard.
- * @param {*} diagram 
+ * Exports the model to a Python template and copies it to the clipboard.
+ * @param {*} model
+ * @param {object} options
  * @param {boolean} withTypes Whether to include type annotations.
  */
-export function exportToPython(diagram, withTypes=true) {
-    const text = generatePythonTemplate(diagram, withTypes);
+export function exportToPython(model, options, withTypes=true) {
+    const text = generatePythonTemplate(model, withTypes);
     copyToClipboard(text);
     Swal.fire({
-        theme: diagram.themeManager.currentTheme,
+        theme: options.theme,
         imageUrl: 'images/python.svg',
         imageWidth: "6em",
         title: "Python Template Copied",
         html: "Python template copied to clipboard.<br>Paste it into a Python file.<br>" +
-            "<a href=\"data:text/plain;charset=utf-8," + encodeURIComponent(text) + "\" download=\"" + diagram.planId + ".py\">Click here to download it.</a>",
+            "<a href=\"data:text/plain;charset=utf-8," + encodeURIComponent(text) + "\" download=\"" + model.id + ".py\">Click here to download it.</a>",
         showCloseButton: true,
     });
 }
-function generatePythonTests(diagram) {
-    const model = diagram.model;
-    const data = model.modelData;
-    let text = `"""\n${data.testDocumentation || "Tests for the " + diagram.planId + " module"}\n\nBy: ${data.authors || "TODO"}\n"""\n\nimport pytest\n\nimport ` + diagram.planId + `\n\n`;
-    for (const func of model.nodeDataArray) {
-        if (func.testable) {
-            text += `def test_${func.name}():\n`;
-            text += func.testCode ? indentText(func.testCode, 4) : `    # TODO: write tests for ${func.name}()\n    pass`;
+function generatePythonTests(model) {
+    const data = model.modelData.toJSON();
+    let text = `"""\n${data.testDocumentation || "Tests for the " + model.id + " module"}\n\nBy: ${data.authors || "TODO"}\n"""\n\nimport pytest\n\nimport ` + model.id + `\n\n`;
+    for (const [key, func] of model.functions.entries()) {
+        if (func.get("testable")) {
+            const name = func.get("name")?.toString() || `function${key}`;
+            text += `def test_${name}():\n`;
+            text += func.testCode ? indentText(func.testCode, 4) : `    # TODO: write tests for ${name}()\n    pass`;
             text += `\n\n`;
         }
     }
@@ -314,19 +288,19 @@ function generatePythonTests(diagram) {
     return text;
 }
 /**
- * Exports the diagram to a Python test template and copies it to the clipboard.
- * @param {*} diagram 
+ * Exports the model to a Python test template and copies it to the clipboard.
+ * @param {*} model 
  */
-export function exportPythonTests(diagram) {
-    const text = generatePythonTests(diagram);
+export function exportPythonTests(model, options={}) {
+    const text = generatePythonTests(model);
     copyToClipboard(text);
     Swal.fire({
-        theme: diagram.themeManager.currentTheme,
+        theme: options.theme,
         imageUrl: 'images/unit-tests.svg',
         imageWidth: "6em",
         title: "Python Unit Tests Copied",
         html: "Python unit tests copied to clipboard.<br>Paste it into a Python file that ends with <code>_test.py</code>.<br>" +
-            "<a href=\"data:text/plain;charset=utf-8," + encodeURIComponent(text) + "\" download=\"" + diagram.planId + "_test.py\">Click here to download it.</a>",
+            "<a href=\"data:text/plain;charset=utf-8," + encodeURIComponent(text) + "\" download=\"" + model.id + "_test.py\">Click here to download it.</a>",
         showCloseButton: true,
     });
 
@@ -343,82 +317,64 @@ function confirmDialog(title, text, confirmFunc, theme='auto') {
         focusConfirm: false,
     }).then((confirm) => { if (confirm) { confirmFunc(); } });
 }
-function rawSetModel(diagram, model) {
-    diagram.model = new GraphLinksModel(model.functions, model.calls);
-    for (const key of Object.keys(model)) {
-        if (key !== 'functions' && key !== 'calls') {
-            diagram.model.modelData[key] = model[key];
-        }
-    }
-}
-function setModel(diagram, model) {
-    if (!model.functions || !model.calls) { return "Invalid model format. Expected 'functions' and 'calls' keys."; }
-    rawSetModel(diagram, model);
-    updateAllProblems(diagram);
-}
-function mergeModel(diagram, model) {
-    if (!model.functions || !model.calls) { return "Invalid model format. Expected 'functions' and 'calls' keys."; }
-    const maxKey = diagram.model.nodeDataArray.reduce((max, n) => Math.max(max, n.key), -1);
-    model.functions.forEach(func => { func.key += maxKey; });
-    model.calls.forEach(call => { call.from += maxKey; call.to += maxKey; });
-    diagram.model.addNodeDataCollection(model.functions);
-    diagram.model.addLinkDataCollection(model.calls);
-    updateAllProblems(diagram);
-}
-/**
- * Reset the diagram to the initial model.
- * @param {*} diagram 
- * @param {boolean} confirm Whether to show a confirmation dialog.
- */
-export function reset(diagram, confirm=true) {
-    if (confirm) {
-        confirmDialog("Reset to Default?", "Are you sure you want to load the default functions for this plan? This will clear the current plan.",
-            () => { reset(diagram, false); }, diagram.themeManager.currentTheme);
-    } else { setModel(diagram, dup(diagram.initialModel)); }
+
+function mergeModel(model, data) {
+    const maxKey = Array.from(model.functions).reduce((max, n) => Math.max(max, parseInt(n.key)), -1);
+    data.model.transact(() => {
+        data.functions.forEach(func => {
+            const key = (parseInt(func.key) + maxKey).toString();
+            func = { ...func };
+            delete func.key;
+            model.functions.set(key, model.convertFuncData(func));
+        });
+        data.calls.forEach(call => {
+            const from = (parseInt(call.from) + maxKey).toString();
+            const to = (parseInt(call.to) + maxKey).toString();
+            model.calls.set(`${from}-${to}`, true);
+        });
+    });
 }
 
-function removeProblems(item) {
-    let data = { ...item };
-    delete data.problems;
-    delete data.linkProblems;
-    return data;
-}
-function removeAllProblems(array) {
-    return array.map(removeProblems);
-}
-function getModel(diagram, includeProblems=false) {
-    const model = diagram.model;
-    const data = includeProblems ? model.modelData : removeProblems(model.modelData);
-    const functions = includeProblems ? model.nodeDataArray : removeAllProblems(model.nodeDataArray);
-    const calls = includeProblems ? model.linkDataArray : removeAllProblems(model.linkDataArray);
-    return { functions, calls, ...data };
-}
 /**
- * Save the diagram as JSON and copy it to the clipboard.
- * @param {*} diagram 
- * @param {boolean} includeProblems Whether to include problem data in the saved JSON.
+ * Reset the model to the initial model.
+ * @param {*} model
+ * @param {*} options
+ * @param {boolean} confirm Whether to show a confirmation dialog.
  */
-export function saveJSON(diagram, includeProblems=false) {
-    const model = getModel(diagram, includeProblems);
-    const json = JSON.stringify(model, null, 2);
+export function reset(model, options, confirm=true) {
+    if (confirm) {
+        confirmDialog("Reset to Default?", "Are you sure you want to load the default functions for this plan? This will clear the current plan.",
+            () => { reset(model, options, false); }, options.theme);
+    } else { model.resetModel(); }
+}
+
+/**
+ * Save the model as JSON and copy it to the clipboard.
+ * @param {*} model 
+ * @param {object} options
+ */
+export function saveJSON(model, options={}) {
+    const data = model.exportModel();
+    const json = JSON.stringify(data, null, 2);
     copyToClipboard(json);
     Swal.fire({
-        theme: diagram.themeManager.currentTheme,
+        theme: options.theme,
         imageUrl: 'images/save.svg',
         imageWidth: "6em",
         title: "JSON Copied",
         html: "JSON version copied to clipboard.<br>Save to a file so it can be reloaded later.<br>" +
-            "<a href=\"data:application/json;charset=utf-8," + encodeURIComponent(json) + "\" download=\"" + diagram.planId + "-plan.json\">Click here to download it.</a>",
+            "<a href=\"data:application/json;charset=utf-8," + encodeURIComponent(json) + "\" download=\"" + model.id + "-plan.json\">Click here to download it.</a>",
         showCloseButton: true,
     });
 }
 /**
- * Load JSON data into the diagram, replacing the current model.
- * @param {*} diagram 
+ * Load JSON data into the model, replacing the current model.
+ * @param {*} model
+ * @param {object} options 
  */
-export function loadJSON(diagram) {
+export function loadJSON(model, options={}) {
     Swal.fire({
-        theme: diagram.themeManager.currentTheme,
+        theme: options.theme,
         title: "Load JSON",
         html: "Paste the JSON data below.<br>This will <em>overwrite</em> the current plan.",
         input: "textarea",
@@ -427,23 +383,24 @@ export function loadJSON(diagram) {
         inputValidator: (value) => {
             if (!value) { return "JSON data is required."; }
             try {
-                const model = JSON.parse(value);
-                if (!model.functions || !model.calls) { return "Invalid JSON format. Expected 'functions' and 'calls' keys."; }
+                const data = JSON.parse(value);
+                if (!data.functions || !data.calls) { return "Invalid JSON format. Expected 'functions' and 'calls' keys at a minimum."; }
             } catch (e) { return "Invalid JSON format"; }
             return null;
         },
     }).then((result) => {
         if (!result.isConfirmed) { return; }
-        loadJSONString(diagram, result.value, false);
+        loadJSONString(model, options, result.value, false);
     });
 }
 /**
- * Import JSON data into the diagram, "merging" with the current model.
- * @param {*} diagram 
+ * Import JSON data into the model, "merging" with the current model.
+ * @param {*} model
+ * @param {object} options 
  */
-export function importJSON(diagram) {
+export function importJSON(model, options={}) {
     Swal.fire({
-        theme: diagram.themeManager.currentTheme,
+        theme: options.theme,
         title: "Import JSON",
         html: "Select a JSON file to import.<br>This will <em>merge</em> the current plan.",
         input: "textarea",
@@ -452,27 +409,27 @@ export function importJSON(diagram) {
         inputValidator: (value) => {
             if (!value) { return "JSON data is required."; }
             try {
-                const model = JSON.parse(value);
-                if (!model.functions || !model.calls) { return "Invalid JSON format. Expected 'functions' and 'calls' keys."; }
+                const data = JSON.parse(value);
+                if (!data.functions || !data.calls) { return "Invalid JSON format. Expected 'functions' and 'calls' keys."; }
             } catch (e) { return "Invalid JSON format"; }
             return null;
         },
     }).then((result) => {
         if (!result.isConfirmed) { return; }
-        loadJSONString(diagram, result.value, true);
+        loadJSONString(model, options, result.value, true);
     });
 }
 
-function loadJSONString(diagram, json, merge=false) {
+function loadJSONString(model, options={}, json, merge=false) {
     try {
-        const model = JSON.parse(json);
-        if (!model.functions || !model.calls) { throw new Error("Invalid JSON format. Expected 'functions' and 'calls' keys."); }
-        if (merge) { mergeModel(diagram, model); }
-        else { setModel(diagram, model); }
+        const data = JSON.parse(json);
+        if (!data.functions || !data.calls) { throw new Error("Invalid JSON format. Expected 'functions' and 'calls' keys at a minimum."); }
+        if (merge) { mergeModel(model, data); }
+        else { model.importModel(data); }
     } catch (e) {
         console.error("Invalid JSON data:", e);
         Swal.fire({
-            theme: diagram.themeManager.currentTheme,
+            theme: options.theme,
             title: "Invalid JSON",
             text: "The JSON data is invalid.",
             icon: "error",
@@ -481,11 +438,11 @@ function loadJSONString(diagram, json, merge=false) {
     }
 }
 
-function loadJSONFile(diagram, file) {
+function loadJSONFile(model, options={}, file) {
     const reader = new FileReader();
-    reader.onload = () => { loadJSONString(diagram, reader.result); };
+    reader.onload = () => { loadJSONString(model, options, reader.result); };
     reader.onerror = () => { Swal.fire({
-        theme: diagram.themeManager.currentTheme,
+        theme: options.theme,
         title: "File Error",
         text: "Error reading the file. Please try again.",
         icon: "error",
@@ -494,8 +451,7 @@ function loadJSONFile(diagram, file) {
     reader.readAsText(file);
 }
 
-function setupDragAndDrop(diagram) {
-    const div = diagram.div;
+export function setupDragAndDrop(model, options={}, div) {
     div.addEventListener("drop", (e) => {
         e.preventDefault();
         div.classList.remove(DRAG_OVER_CLASS);
@@ -506,25 +462,25 @@ function setupDragAndDrop(diagram) {
             //     [...e.dataTransfer.items].filter(item => item.kind === "string").length);
             // console.log(e.dataTransfer.files.length);
 
-            const items = e.dataTransfer.items;
-            if (items.length >= 3 && items[0].kind === "string" && items[1].kind === "string" && items[2].kind === "string") {
-                items[1].getAsString((str) => { if (str.startsWith("file://")) {
-                    [...items].forEach((item, i) => {
-                        if (item.kind === "file") { console.log(i, "dnd - file:", item.getAsFile().name); }
-                        else if (item.kind === "string") { item.getAsString((str) => { console.log(i, "dnd - str:", str); }); }
-                    });
-                } });
-            }
+            // const items = e.dataTransfer.items;
+            // if (items.length >= 3 && items[0].kind === "string" && items[1].kind === "string" && items[2].kind === "string") {
+            //     items[1].getAsString((str) => { if (str.startsWith("file://")) {
+            //         [...items].forEach((item, i) => {
+            //             if (item.kind === "file") { console.log(i, "dnd - file:", item.getAsFile().name); }
+            //             else if (item.kind === "string") { item.getAsString((str) => { console.log(i, "dnd - str:", str); }); }
+            //         });
+            //     } });
+            // }
 
             const item = e.dataTransfer.items[0];
-            if (item.kind === "file") { loadJSONFile(diagram, item.getAsFile()); }
+            if (item.kind === "file") { loadJSONFile(model, options, item.getAsFile()); }
             else if (item.kind === "string") {
                 item.getAsString((str) => {
-                    if (str.startsWith("{")) { loadJSONString(diagram, str); }
+                    if (str.startsWith("{")) { loadJSONString(model, options, str); }
                 });
             }
         } else if (e.dataTransfer.files) {
-            loadJSONFile(diagram, e.dataTransfer.files[0]);
+            loadJSONFile(model, options, e.dataTransfer.files[0]);
         }
     });
     div.addEventListener("dragenter", (e) => { e.preventDefault(); div.classList.add(DRAG_OVER_CLASS); });

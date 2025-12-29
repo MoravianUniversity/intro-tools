@@ -1,0 +1,22 @@
+{
+  "name": "intro-tools",
+  "version": "1.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "fast-diff": "^1.3.0",
+    "gojs": "^3.1.3",
+    "prismjs": "^1.30.0",
+    "sortablejs": "^1.15.6",
+    "sweetalert2": "^11.26.17",
+    "y-indexeddb": "^9.0.12",
+    "yjs": "^13.6.28"
+  },
+  "devDependencies": {
+    "vite": "^6.4.1"
+  }
+}
