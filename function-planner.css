@@ -370,7 +370,7 @@ div:where(.swal2-container) img:where(.swal2-image) { margin: 2em auto 0 !import
     .func-vars >div:not(.func-var-button):not(:has(.func-var))::after { content: "None"; display: block; height: 0em; }
     .func-vars {
         position: relative;
-        width: calc(100%-1em);
+        width: calc(100% - 1em);
         margin: 1.5em 0 0 0;
         padding: 0.5em;
         padding-bottom: 1.75em;
