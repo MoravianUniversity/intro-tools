@@ -1,5 +1,5 @@
 {
-  "name": "intro-tools",
+  "name": "function-planner",
   "version": "1.0.0",
   "type": "module",
   "scripts": {
@@ -14,9 +14,11 @@
     "sortablejs": "^1.15.6",
     "sweetalert2": "^11.26.17",
     "y-indexeddb": "^9.0.12",
+    "y-websocket": "^3.0.0",
     "yjs": "^13.6.28"
   },
   "devDependencies": {
-    "vite": "^6.4.1"
+    "vite": "^6.4.1",
+    "vite-plugin-cdn-import": "^1.0.1"
   }
 }

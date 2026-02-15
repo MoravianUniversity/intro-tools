@@ -9,6 +9,19 @@ import { reset, exportToPython, exportPythonTests, saveJSON, loadJSON, importJSO
 import { setSettings, SHOW_COLLAPSE_BUTTON, ALLOW_RECURSIVE } from './settings.js';
 import { loadSVG, htmlToNode, isMacOS } from './utils.js';
 
+import zoomIcon from '../images/magnifier.svg';
+import addIcon from '../images/add.svg';
+import resetIcon from '../images/reset.svg';
+import undoIcon from '../images/undo.svg';
+import redoIcon from '../images/redo.svg';
+import pythonIcon from '../images/python.svg';
+import unitTestsIcon from '../images/unit-tests.svg';
+import saveIcon from '../images/save.svg';
+import loadIcon from '../images/load.svg';
+import mergeIcon from '../images/merge.svg';
+import settingsIcon from '../images/settings.svg';
+import helpIcon from '../images/help.svg';
+
 export const INFO_BOX_CLASS_NAME = 'func-planner-info-box';
 export const MAIN_CHECK_CLASS_NAME = 'func-planner-main-check';
 export const NUM_COUNT_CLASS_NAME = 'func-planner-count';
@@ -60,12 +73,12 @@ function makeWidgetButtons(parentDiv, diagram, model, options={}) {
     }, true); // require capture to get before GoJS (even though its UndoManager is disabled, it still captures keys)
 
     model.addListener('synced', () => { setTimeout(() => { diagram.zoomToFit(); }, 0); });
-    addButton(holder, 'magnifier.svg', '', `Zoom to Fit (${ctrl}R)`, () => { diagram.zoomToFit(); });
-    addButton(holder, 'add.svg', 'no-outline', `Add Function (${ctrl}F)`, () => { model.addFunc(); });
+    addButton(holder, zoomIcon, '', `Zoom to Fit (${ctrl}R)`, () => { diagram.zoomToFit(); });
+    addButton(holder, addIcon, 'no-outline', `Add Function (${ctrl}F)`, () => { model.addFunc(); });
 
     // undo/redo buttons
-    const undoButton = addButton(holder, 'undo.svg', 'no-outline', `Undo (${ctrl}Z)`, undo);
-    const redoButton = addButton(holder, 'redo.svg', 'no-outline', `Redo (⇧${ctrl}Z)`, redo);
+    const undoButton = addButton(holder, undoIcon, 'no-outline', `Undo (${ctrl}Z)`, undo);
+    const redoButton = addButton(holder, redoIcon, 'no-outline', `Redo (⇧${ctrl}Z)`, redo);
     function updateUndoRedoButtons() {
         undoButton.disabled = !model.undoManager.canUndo();
         redoButton.disabled = !model.undoManager.canRedo();
@@ -76,30 +89,30 @@ function makeWidgetButtons(parentDiv, diagram, model, options={}) {
     updateUndoRedoButtons();
 
     // reset button
-    addButton(holder, 'reset.svg', 'no-outline', `Reset`, () => { reset(model, options); });
+    addButton(holder, resetIcon, 'no-outline', `Reset`, () => { reset(model, options); });
 
     // export/import buttons
-    addButton(holder, 'python.svg', '', 'Create Python Template', () => { exportToPython(model, options); });
-    const testButton = addButton(holder, 'unit-tests.svg', '', 'Generate Python Unit Tests', () => { exportPythonTests(model, options); });
+    addButton(holder, pythonIcon, '', 'Create Python Template', () => { exportToPython(model, options); });
+    const testButton = addButton(holder, unitTestsIcon, '', 'Generate Python Unit Tests', () => { exportPythonTests(model, options); });
     model.addFuncListener('testable', () => {
         testButton.disabled = Array.from(model.functions.values()).every(n => !n.get('testable'));
     });
     testButton.disabled = Array.from(model.functions.values()).every(n => !n.get('testable'));
     // TODO: only have these available if not connected to a shared Yjs model
-    addButton(holder, 'save.svg', 'no-outline', 'Save as JSON', () => { saveJSON(model, options); });
-    addButton(holder, 'load.svg', 'no-outline', 'Load from JSON', () => { loadJSON(model, options); });
-    // addButton(holder, 'merge.svg', 'no-outline', 'Merge from JSON', () => { importJSON(model, options); });
+    addButton(holder, saveIcon, 'no-outline', 'Save as JSON', () => { saveJSON(model, options); });
+    addButton(holder, loadIcon, 'no-outline', 'Load from JSON', () => { loadJSON(model, options); });
+    // addButton(holder, mergeIcon, 'no-outline', 'Merge from JSON', () => { importJSON(model, options); });
 }
 
 function addButton(holder, icon, classes, name, callback) {
     const button = document.createElement('button');
     let img;
-    if (icon.toLowerCase().endsWith('.svg')) {
+    if (icon.toLowerCase().startsWith('data:image/svg+xml') || icon.toLowerCase().endsWith('.svg')) {
         img = document.createElement('div');
-        loadSVG(`images/${icon}`, img, "");
+        loadSVG(icon, img, "");
     } else {
         img = document.createElement('img');
-        img.src = `images/${icon}`;
+        img.src = icon;
     }
     img.classList = classes + " func-planner-icon";
     button.appendChild(img);
@@ -155,7 +168,7 @@ function makeSettingsButton(parentDiv, options) {
     const button = document.createElement('div');
     button.className = 'func-planner-fab func-planner-settings-button';
     button.title = 'Settings';
-    loadSVG('images/settings.svg', button, "⚙️");
+    loadSVG(settingsIcon, button, "⚙️");
     parentDiv.appendChild(button);
 
     button.addEventListener('click', () => {
@@ -182,7 +195,7 @@ function makeInstructionsButton(parentDiv) {
     const button = document.createElement('div');
     button.className = 'func-planner-fab func-planner-instructions-button';
     button.title = 'Instructions';
-    loadSVG('images/help.svg', button, "ℹ️");
+    loadSVG(helpIcon, button, "ℹ️");
     parentDiv.appendChild(button);
     parentDiv.appendChild(htmlToNode(`<div class="func-planner-instructions"><h2>Instructions</h2>
 <p>The diagram shows the functions and who they call. Clicking on a function

@@ -8,6 +8,9 @@ import Swal from 'sweetalert2';
 import { wrapWithLabel, makeCheckbox, makeTextarea, makeCodeEditorWithShowCheckbox, makeReadOnlySelect, makeProblemsDiv, isReadOnly } from './inspector.js';
 import { loadSVG, makeOption } from './utils.js';
 
+import addIcon from '../images/add.svg';
+import removeIcon from '../images/remove.svg';
+
 import TypeEditor from './type-editor.js';
 
 /**
@@ -449,7 +452,7 @@ function makeDescElement() {
 function makeVarButton(name) {
     const button = document.createElement("div");
     button.className = "func-var-button func-var-button-" + name;
-    loadSVG(`images/${name}.svg`, button, name === "remove" ? "x" : "+");
+    loadSVG(name === "remove" ? removeIcon : addIcon, button, name === "remove" ? "x" : "+");
     return button;
 }
 function makeAddButton() { return makeVarButton("add"); }

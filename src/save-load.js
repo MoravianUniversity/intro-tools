@@ -16,6 +16,10 @@
 import { GraphLinksModel } from 'gojs';
 import Swal from 'sweetalert2';
 
+import pythonIcon from '../images/python.svg';
+import unitTestsIcon from '../images/unit-tests.svg';
+import saveIcon from '../images/save.svg';
+
 export const DEFAULT_PROGRAM_HEADER = "TODO: program header";
 const DRAG_OVER_CLASS = 'func-planner-drag-over';
 
@@ -265,7 +269,7 @@ export function exportToPython(model, options, withTypes=true) {
     copyToClipboard(text);
     Swal.fire({
         theme: options.theme,
-        imageUrl: 'images/python.svg',
+        imageUrl: pythonIcon,
         imageWidth: "6em",
         title: "Python Template Copied",
         html: "Python template copied to clipboard.<br>Paste it into a Python file.<br>" +
@@ -296,7 +300,7 @@ export function exportPythonTests(model, options={}) {
     copyToClipboard(text);
     Swal.fire({
         theme: options.theme,
-        imageUrl: 'images/unit-tests.svg',
+        imageUrl: unitTestsIcon,
         imageWidth: "6em",
         title: "Python Unit Tests Copied",
         html: "Python unit tests copied to clipboard.<br>Paste it into a Python file that ends with <code>_test.py</code>.<br>" +
@@ -359,7 +363,7 @@ export function saveJSON(model, options={}) {
     copyToClipboard(json);
     Swal.fire({
         theme: options.theme,
-        imageUrl: 'images/save.svg',
+        imageUrl: saveIcon,
         imageWidth: "6em",
         title: "JSON Copied",
         html: "JSON version copied to clipboard.<br>Save to a file so it can be reloaded later.<br>" +
