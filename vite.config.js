@@ -12,6 +12,7 @@ export default defineConfig({
     rollupOptions: {
       input: {
         'function-planner': resolve(__dirname, 'function-planner.html'),
+        'call-graph': resolve(__dirname, 'call-graph.html'),
         // 'bigrams-planner': resolve(__dirname, 'bigrams-planner.html'),
         // 'cell-phone-family-plan': resolve(__dirname, 'cell-phone-family-plan.html'),
         // 'grades-planner': resolve(__dirname, 'grades-planner.html'),
