@@ -17,7 +17,7 @@ export default defineConfig({
         // 'cell-phone-family-plan': resolve(__dirname, 'cell-phone-family-plan.html'),
         // 'grades-planner': resolve(__dirname, 'grades-planner.html'),
         // 'hangman-planner': resolve(__dirname, 'hangman-planner.html'),
-        // 'ipo-planner': resolve(__dirname, 'ipo-planner.html'),
+        'ipo': resolve(__dirname, 'ipo.html'),
         // 'madlibs-planner': resolve(__dirname, 'madlibs-planner.html'),
         // 'number-guess-planner': resolve(__dirname, 'number-guess-planner.html'),
       },

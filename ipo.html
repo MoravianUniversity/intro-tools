@@ -1,0 +1,36 @@
+    <meta charset="UTF-8">
+    <title>IPO/Prime Function Planner</title>
+    <link rel="icon" type="image/png" href="favicon.png" />
+    <link rel="shortcut icon" href="favicon.ico" />
+    <style>
+        body { margin: 0; padding: 0; }
+        #planner {
+            position: absolute;
+            top: 0; left: 0;
+            bottom: 0; right: 0;
+            overflow: hidden;
+        }
+    </style>
+    <script type="module">
+    import init from "./function-planner.js";
+    window.addEventListener('DOMContentLoaded', () => {
+        init('planner', "prime", {
+            initialModel: {functions: [{ key: 1, name: 'main', readOnly: ['name', 'desc', 'params', 'returns'] }], calls: []},
+            allowedTypes: ['int', 'float', 'str', 'bool'],
+            minFunctions: 4,
+            maxFunctions: 4, // TODO: not implemented yet
+            minTestable: 1,
+            maxTestable: 1, // TODO: not implemented yet
+            minInputFunctions: 1, // TODO: not implemented yet
+            maxInputFunctions: 1, // TODO: not implemented yet
+            minOutputFunctions: 1, // TODO: not implemented yet
+            maxOutputFunctions: 1, // TODO: not implemented yet
+            adminMode: true,
+        });
+    });
+    </script>
+</head>
+<body>
+    <div id="planner"></div>
+</body>
+</html>
