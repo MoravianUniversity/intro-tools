@@ -13,11 +13,11 @@ export default defineConfig({
       input: {
         'function-planner': resolve(__dirname, 'function-planner.html'),
         'call-graph': resolve(__dirname, 'call-graph.html'),
+        'ipo': resolve(__dirname, 'ipo.html'),
+        'grades': resolve(__dirname, 'grades.html'),
         // 'bigrams-planner': resolve(__dirname, 'bigrams-planner.html'),
         // 'cell-phone-family-plan': resolve(__dirname, 'cell-phone-family-plan.html'),
-        // 'grades-planner': resolve(__dirname, 'grades-planner.html'),
         // 'hangman-planner': resolve(__dirname, 'hangman-planner.html'),
-        'ipo': resolve(__dirname, 'ipo.html'),
         // 'madlibs-planner': resolve(__dirname, 'madlibs-planner.html'),
         // 'number-guess-planner': resolve(__dirname, 'number-guess-planner.html'),
       },
