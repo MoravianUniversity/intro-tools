@@ -91,22 +91,26 @@ export class Model {
      */
     importModel(data) {
         this.model.transact(() => {
-            // import modelData
+            // TODO: temporarily disable observers while importing?
             this.modelData.clear();
+            this.functions.clear();
+            this.calls.clear();
+
+            // import modelData
             for (const [prop, value] of Object.entries(data || {})) {
                 if (['functions', 'calls'].includes(prop)) { continue; }
                 this.modelData.set(prop, value);
             }
+
             // import functions
-            this.functions.clear();
             for (let func of (data.functions || [])) {
                 const key = func.key.toString();
                 func = {...func};
                 delete func.key;
                 this.functions.set(key, this.convertFuncData(func));
             }
+
             // import calls
-            this.calls.clear();
             for (const {from, to} of (data.calls || [])) {
                 const callKey = `${from}-${to}`;
                 this.calls.set(callKey, true);
@@ -294,11 +298,15 @@ export class Model {
     #funcObserver(events) {
         for (const event of events) {
             if (event.target === this.functions) {
-                for (const [key, {action}] of event.changes.keys) {
+                for (const [key, {action, oldValue}] of event.changes.keys) {
                     if (action === 'add') { this.#fireFuncAddListeners(key); }
                     else if (action === 'delete') { this.#fireFuncRemoveListeners(key); }
                     else if (action === 'update') {
-                        console.warn('Unexpected update action on Yjs functions map');
+                        // empty function to non-empty function (seen during loading)
+                        if (Object.keys(oldValue?.toJSON())?.length !== 0) {
+                            console.warn('Unexpected update action on Yjs functions map');
+                            console.warn(action, key, oldValue?.toJSON(), "->", this.functions.get(key)?.toJSON());
+                        }
                         this.#fireFuncRemoveListeners(key);
                         this.#fireFuncAddListeners(key);
                     }
@@ -380,10 +388,10 @@ export class Model {
         if (data instanceof Y.Map) { return data; }
         if (data instanceof Map) { data = Object.fromEntries(data); }
         return new Y.Map(Object.entries(data).map(([prop, val]) => {
-            val = FUNC_DATA_TEXTS.includes(prop) ? new Y.Text(val) :
-                    FUNC_DATA_ARRAYS.includes(prop) ? new Y.Array(val.map(this.convertFuncData)) :
+            const yval = FUNC_DATA_TEXTS.includes(prop) ? new Y.Text(val) :
+                    FUNC_DATA_ARRAYS.includes(prop) ? Y.Array.from(val.map(this.convertFuncData)) :
                     val;
-            return [prop, val];
+            return [prop, yval];
         }));
     }
 
@@ -658,7 +666,7 @@ export class Model {
     }
     #callObserver(event) {
         let lastDelete = null; // used to track delete + add as update
-        for (const [key, {action}] of event.changes.keys) {
+        for (const [key, {action, oldValue}] of event.changes.keys) {
             if (action === 'add') {
                 if (lastDelete !== null) {
                     // treat as update
@@ -668,7 +676,14 @@ export class Model {
             } else if (action === 'delete') {
                 if (lastDelete !== null) { this.#deleteCall(lastDelete); } // fire previous delete
                 lastDelete = key;
-            } else if (action === 'update') { console.warn('Unexpected update action on Yjs calls map'); }
+            } else if (action === 'update') {
+                if (oldValue === this.calls.get(key)) {
+                    // no change, do nothing [why does this happen?]
+                } else {
+                    console.warn('Unexpected update action on Yjs calls map');
+                    console.warn(action, key, oldValue, "->", this.calls.get(key));
+                }
+            }
         }
         if (lastDelete !== null) { this.#deleteCall(lastDelete); } // fire last delete
     }

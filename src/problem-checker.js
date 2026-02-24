@@ -232,8 +232,8 @@ function linkProblems(model, fromKey, toKey) {
  */
 function funcLinkProblems(model, key) {
     const problems = [];
-
-    const isMain = model.functions.get(key).get("name")?.toString()?.trim() === 'main';
+    // sometimes we can get called in the middle of an update, so we check if the function still exists just to be safe
+    const isMain = model.functions.get(key)?.get("name")?.toString()?.trim() === 'main';
     const callsInto = model.callingFunctions[key] || [];
     const callsOutOf = model.calledFunctions[key] || [];
     if (isMain) {
