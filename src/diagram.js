@@ -152,6 +152,17 @@ export function setupDiagram(
         }).bindObject('opacity', 'isSelected', (s) => (s ? 1 : 0)));
         //.bindTwoWay('isTreeExpanded')
     }
+    // override the default tooltip hiding behavior to not hide when hovering over the tooltip itself
+    diagram.toolManager.hideToolTip = () => {
+        const elements = document.querySelectorAll(':hover');
+        for (const el of elements) { if (el.classList.contains('tooltip-container')) { return; } }
+        go.ToolManager.prototype.hideToolTip.call(diagram.toolManager);
+    }
+    // hide tooltips when linking
+    diagram.toolManager.linkingTool.doActivate = function() {
+        go.LinkingTool.prototype.doActivate.call(diagram.toolManager.linkingTool);
+        go.ToolManager.prototype.hideToolTip.call(diagram.toolManager);
+    }
 
     // Link template
     diagram.linkTemplate = new go.Link({
@@ -328,17 +339,20 @@ function createToolTip(rootElem) {
         return text;
     }
     const toolTipElem = document.createElement('div');
-    toolTipElem.className = 'tooltip-content';
+    toolTipElem.className = 'tooltip-container';
     toolTipElem.style.display = 'none';
     rootElem.appendChild(toolTipElem);
+    const toolTipContent = document.createElement('div');
+    toolTipContent.className = 'tooltip-content';
+    toolTipElem.appendChild(toolTipContent);
     return new go.HTMLInfo({
         mainElement: toolTipElem,
         show: (obj, diagram, tool) => {
             const pos = diagram.transformDocToView(obj.part.findObject('SHAPE').getDocumentPoint(go.Spot.BottomLeft));
-            toolTipElem.style.left = `${pos.x}px`;
-            toolTipElem.style.top = `${pos.y + 10}px`;
+            toolTipElem.style.left = `${pos.x-10}px`;
+            toolTipElem.style.top = `${pos.y}px`;
             const text = genToolTip(obj.part.data);
-            toolTipElem.innerHTML = text;
+            toolTipContent.innerHTML = text;
             toolTipElem.style.display = 'block';
             return toolTipElem;
         },

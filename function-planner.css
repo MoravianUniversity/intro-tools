@@ -241,8 +241,14 @@ div:where(.swal2-container) img:where(.swal2-image) { margin: 2em auto 0 !import
 
 .func-planner ul.problems {
     padding-left: 1.3em;
+    padding-top: 0.3em;
     margin: 0;
     list-style: none;
+    max-width: 17em;
+}
+.func-planner .tooltip-content ul.problems {
+    padding-top: 0.6em;
+    padding-bottom: 0.2em;
 }
 .func-planner ul.problems li {
     padding: 0.1em 0.3em;
@@ -275,18 +281,28 @@ div:where(.swal2-container) img:where(.swal2-image) { margin: 2em auto 0 !import
 .func-planner ul.problems li.warning { background-color: var(--warning-stroke); }
 .func-planner ul.problems li.warning:before { content: "⚠️"; }
 
-.func-planner .tooltip-content {
+.func-planner .tooltip-container {
     position: absolute;
     z-index: 120;
-    background-color: var(--tooltip-background-color);
-    border: 1px solid var(--stroke-color);
-    border-radius: 0.5em;
-    padding: 0.5em;
-    box-shadow: 0 0 0.5em var(--shadow-color);
-    font-size: 0.9em;
-    max-width: 300px;
-    pointer-events: none;
-    code { font-size: 1.2em; font-weight: bold; }
+    .tooltip-content {
+        background-color: var(--tooltip-background-color);
+        border: 1px solid var(--stroke-color);
+        border-radius: 0.5em;
+        padding: 0.5em;
+        box-shadow: 0 0 0.5em var(--shadow-color);
+        font-size: 0.9em;
+        max-width: 400px;
+        margin: 10px;
+        pointer-events: none;
+        code {
+            font-size: 1.2em;
+            font-weight: bold;
+            white-space: pre;
+            display: block;
+            max-width: 100%;
+            overflow-x: auto;
+        }
+    }
 }
 
 .func-planner .inspector-resizer {
