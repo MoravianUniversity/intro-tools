@@ -447,7 +447,7 @@ div:where(.swal2-container) img:where(.swal2-image) { margin: 2em auto 0 !import
         }
         .func-var:not(.func-var-readonly):hover .func-var-drag-handle { background: url("images/drag-dots.svg") center/0.8em no-repeat; }
     }
-    .func-vars.func-vars-readonly { padding-bottom: 0em; }
+    .func-vars.func-vars-readonly { padding-bottom: 0em; min-height: 3em; }
 
     label { display: block; }
     label:first-of-type { margin-top: 1em; }
