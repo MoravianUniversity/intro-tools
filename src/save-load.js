@@ -283,8 +283,9 @@ function generatePythonTests(model) {
     for (const [key, func] of model.functions.entries()) {
         if (func.get("testable")) {
             const name = func.get("name")?.toString() || `function${key}`;
+            const testCode = func.get("testCode")?.toString() || "";
             text += `def test_${name}():\n`;
-            text += func.testCode ? indentText(func.testCode, 4) : `    # TODO: write tests for ${name}()\n    pass`;
+            text += testCode ? indentText(testCode, 4) : `    # TODO: write tests for ${name}()\n    pass`;
             text += `\n\n`;
         }
     }

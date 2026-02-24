@@ -33,8 +33,8 @@
                 io: "none",
                 testable: false,
                 code: "with open(\"students.txt\") as file:\n    return [line.strip() for line in file]",
-                readOnly: true,
                 showCode: true,
+                readOnly: true,
             },
             {
                 key: 3,
@@ -45,8 +45,8 @@
                 io: "validation",
                 testable: false,
                 code: "while True:\n    try:\n        grade = int(input(f\"Enter the grade for {student_name}: \"))\n        if 0 <= grade <= 100:\n            return grade\n        else:\n            print(\"Grade must be between 0 and 100.\")\n    except ValueError:\n        print(\"Grade must be a number.\")",
-                readOnly: ['name', 'desc', 'params', 'returns', 'io', 'testable', 'code'],
                 showCode: true,
+                readOnly: ['name', 'desc', 'params', 'returns', 'io', 'testable', 'code'],
             },
             {
                 key: 4,
@@ -56,7 +56,9 @@
                 returns: [{"type": "float", "desc": "the median of the grades"}],
                 io: "none",
                 testable: true,
-                readOnly: ['name', 'desc', 'params', 'returns', 'io', 'testable'],
+                testCode: "assert grades.median([1, 2, 3]) == 2\nassert grades.median([100, 1, 3]) == 3\nassert grades.median([1]) == 1\nassert grades.median([2, 1]) == 1.5\nassert grades.median([1, 2]) == 1.5\nassert grades.median([0, 0]) == 0\nassert grades.median([100, -1, 100, 100]) == 100\nassert grades.median([0, 100, 100, 0]) == 50\n",
+                showTestCode: true,
+                readOnly: ['name', 'desc', 'params', 'returns', 'io', 'testable', 'testCode'],
             }
         ],
         calls: [{from: 1, to: 2}]
