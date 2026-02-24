@@ -214,7 +214,8 @@ export function setupDiagram(
     diagram.toolManager.linkingTool.linkValidation = linkValidator;
     diagram.toolManager.relinkingTool.linkValidation = linkValidator;
     diagram.commandHandler.canDeleteSelection = () => (options.adminMode || !diagram.selection.any(part =>
-        (part instanceof go.Link) && (isCallsOutOfRO(part.fromNode.data.readOnly) || isCallsIntoRO(part.toNode.data.readOnly))
+        (part instanceof go.Link) && (isCallsOutOfRO(part.fromNode.data.readOnly) || isCallsIntoRO(part.toNode.data.readOnly)) ||
+        ((part instanceof go.Node) && part.data.readOnly)
     ));
 
     // Add all of the extra UI elements

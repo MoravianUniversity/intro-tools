@@ -22,6 +22,7 @@ export function makeNameEditor(model, options) {
             textEditor: functionNameEditor(model, options),
             textEdited: (tb, oldText, newText) => handleNameEdited(model, tb, oldText, newText),
         }).theme('stroke', 'stroke').theme('font', 'text')
+            .bind('editable', 'readOnly', (readOnly) => !isReadOnly(readOnly, 'name'))
             .bindTwoWay('text', 'name',
                 (name, tb) => name || 'function',
                 (name, data, model) => {
