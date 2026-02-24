@@ -154,15 +154,19 @@ export function makeCheckbox(field, funcs) {
  */
 export function makeTextarea(field, funcs, attrs={}) {
     const textarea = document.createElement('textarea');
+    let resize = () => {};
 
     // auto-resize the textarea if field-sizing is not supported
     if (!CSS.supports("field-sizing: content")) {
-        textarea.addEventListener('input', (e) => {
-            e.target.style.height = "";
-            e.target.style.height = e.target.scrollHeight + 5 + "px";
-        });
-        setTimeout(() => {
+        resize = () => {
+            textarea.style.height = "";
             textarea.style.height = textarea.scrollHeight + 5 + "px";
+        };
+        textarea.addEventListener('input', resize);
+        setTimeout(() => {
+            if (textarea.scrollHeight > 0) {
+                textarea.style.height = textarea.scrollHeight + 5 + "px";
+            }
         }, 0);
     }
 
@@ -175,6 +179,7 @@ export function makeTextarea(field, funcs, attrs={}) {
         if (textarea.value !== value) {
             textarea.value = value;
             textarea.rows = value.trim().split('\n').length + 2;
+            resize();
         }
     });
     funcs.listenRO(field, (readOnly) => { textarea.readOnly = readOnly; });
