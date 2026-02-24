@@ -256,6 +256,7 @@ function generatePythonTemplate(model, withTypes=true) {
     if (mainFunc) {
         text += mainFunc + '\n\n\nif __name__ == "__main__":\n    main()\n';
     }
+    text = text.replace(/[ \t\f\v]+$/gm, '');  // remove all trailing whitespace
     return text;
 }
 /**
@@ -290,6 +291,7 @@ function generatePythonTests(model) {
         }
     }
     text += `if __name__ == '__main__':\n    pytest.main(["--no-header", "--tb=short"])\n`;
+    text = text.replace(/[ \t\f\v]+$/gm, '');  // remove all trailing whitespace
     return text;
 }
 /**
