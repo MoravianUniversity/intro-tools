@@ -38,8 +38,8 @@ const DEFAULT_ALLOWED_TYPES = ['int', 'float', 'str', 'bool', 'list', 'tuple', '
  * @param {number} options.minTestable - Minimum number of testable functions required (for validation), defaults to 0
  * @param {number} options.minModuleDescLength - Minimum length of module description (for validation), defaults to 25
  * @param {number} options.minFuncDescLength - Minimum length of function description (for validation), defaults to 20
- * @param {number} options.minParamDescLength - Minimum length of parameter description (for validation), defaults to 10
- * @param {number} options.minReturnDescLength - Minimum length of return description (for validation), defaults to 10
+ * @param {number} options.minParamDescLength - Minimum length of parameter description (for validation), defaults to 12
+ * @param {number} options.minReturnDescLength - Minimum length of return description (for validation), defaults to 12
  * @param {boolean} options.adminMode - If true, enables admin mode features (nothing is read-only or not shown, allows editing read-only properties)
  * @param {boolean} options.callGraphOnly - If true, hides the module and function inspectors, only shows the call graph (and suppresses most problem checking)
  */

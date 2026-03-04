@@ -398,13 +398,13 @@ function funcProblems(model, key, options={}, fix=false) {
             names.push(param.name);
             if (!param.type) { problems.push(["error", `params[${i}].type`, "Parameter type is required."]); }
             if (!param.desc) { problems.push(["error", `params[${i}].desc`, "Parameter description is required."]); }
-            else if (param.desc.length < (options.minParamDescLength ?? 20)) { problems.push(["warning", `params[${i}].desc`, "Parameter description is too short - be more descriptive!"]); }
+            else if (param.desc.length < (options.minParamDescLength ?? 12)) { problems.push(["warning", `params[${i}].desc`, "Parameter description is too short - be more descriptive!"]); }
         }
         for (let i = 0; i < returns.length; i++) {
             const ret = returns[i];
             if (!ret.type) { problems.push(["error", `returns[${i}].type`, "Return value type is required."]); }
             if (!ret.desc) { problems.push(["error", `returns[${i}].desc`, "Return value description is required."]); }
-            else if (ret.desc.length < (options.minReturnDescLength ?? 20)) { problems.push(["warning", `returns[${i}].desc`, "Return value description is too short - be more descriptive!"]); }
+            else if (ret.desc.length < (options.minReturnDescLength ?? 12)) { problems.push(["warning", `returns[${i}].desc`, "Return value description is too short - be more descriptive!"]); }
         }
     }
 
