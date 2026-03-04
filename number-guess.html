@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Lab 7: Number Guessing Game Function Planner</title>
+    <link rel="icon" type="image/png" href="favicon.png" />
+    <link rel="shortcut icon" href="favicon.ico" />
+    <style>
+        body { margin: 0; padding: 0; }
+        #planner {
+            position: absolute;
+            top: 0; left: 0;
+            bottom: 0; right: 0;
+            overflow: hidden;
+        }
+    </style>
+    <script type="module">
+    import init from "./function-planner.js";
+    window.addEventListener('DOMContentLoaded', () => {
+        init('planner', "number-guess", {
+            initialModel: {
+                functions: [
+                    {
+                        key: 1,
+                        name: "main",
+                        io: "input",
+                        code: "user_name = input(\"What's your name? \")\nplay_one_game(user_name)",
+                        showCode: true,
+                        readOnly: true
+                    },
+                    {
+                        key: 2,
+                        name: "get_guess_outcome",
+                        desc: "Checks a guessed number against an actual value, returning a value based on if it is less than, more than, or equal to the actual value. It also looks for values that are 'not even close'.",
+                        params: [
+                            {name: "guessed", type: "int", desc: "the guessed number"},
+                            {name: "actual", type: "int", desc: "the actual number to be guessed (i.e. the answer)"}
+                        ],
+                        returns: [{type: "str", desc: "the message to show"}],
+                        io: "none",
+                        testable: true,
+                        code: "diff = guessed - actual\nif diff < 0:\n    return 'Your guess was too low.'\nelif diff < -20:\n    return 'Your guess was too low (not even close)!'\nelif diff > 0:\n    return 'Your guess was too high.'\nelse:\n    return 'Your guess was too high (not even close)!'",
+                        showCode: true,
+                        testCode: "# These are correct - do not change these!\nassert number_guess.get_guess_outcome(1, 1) == 'Your guess was correct!'\nassert number_guess.get_guess_outcome(50, 50) == 'Your guess was correct!'\nassert number_guess.get_guess_outcome(1, 2) == 'Your guess was too low.'\nassert number_guess.get_guess_outcome(1, 21) == 'Your guess was too low.'\nassert number_guess.get_guess_outcome(1, 22) == 'Your guess was too low (not even close)!'\nassert number_guess.get_guess_outcome(22, 1) == 'Your guess was too high (not even close)!'\nassert number_guess.get_guess_outcome(21, 1) == 'Your guess was too high.'\nassert number_guess.get_guess_outcome(2, 1) == 'Your guess was too high.'",
+                        showTestCode: true,
+                        readOnly: ['name', 'desc', 'params', 'returns', 'io', 'testable', 'code', 'testCode'],
+                    },
+                    {
+                        key: 3,
+                        name: "play_one_game",
+                        desc: "Plays a single number-guessing game with the user (whose name is given as an argument). To play the game, the computer thinks of a number, and then repeatedly:\n    * gets a guess from the user\n    * checks the guess against the computer's number\n    * prints the outcome string\n    * updates the allowed range for guesses\nThat stops once the user guesses the correct number. Then, the user is informed how many guesses it took them.",
+                        params: [{name: "user_name", type: "str", desc: "the name of the user/game player"}],
+                        returns: [{type: "int", desc: "the number of guesses it took the user to guess the number"}],
+                        io: "indirect",
+                        code: "# The initial range of possible guesses, will be updated as the game progresses\nmin_guess = 1\nmax_guess = 100\n\n# Have the computer think of a number\nnumber = thinking_of_a_number(user_name)\n\n# Initialize the number of guesses\nnum_guesses = 0\n\n# Repeat until correctly guessed\ncorrect = False\nwhile not correct:\n    correct, min_guess, max_guess = play_one_round(user_name, number, min_guess, max_guess)\n    num_guesses += 1\n\n# Display the results\ndisplay_result(user_name, num_guesses)\n\nreturn num_guesses",
+                        showCode: true,
+                        readOnly: ['name', 'desc', 'params', 'returns', 'io', 'testable', 'code'],
+                    }
+                ],
+                calls: [{"from": 1, "to": 3}],
+            },
+            allowedTypes: ['int', 'float', 'str', 'bool', 'list'],
+            minFunctions: 7,
+            minTestable: 1,
+            minInputFunctions: 2, // TODO: not implemented yet
+            maxInputFunctions: 2, // TODO: not implemented yet
+            minOutputFunctions: 4, // TODO: not implemented yet
+            maxOutputFunctions: 4, // TODO: not implemented yet
+            adminMode: false,
+        });
+    });
+    </script>
+</head>
+<body>
+    <div id="planner"></div>
+</body>
+</html>
+
+
+    <script type="module">
+    let model = {
+    };
+    </script>
