@@ -243,7 +243,8 @@ function createVarsBox(model, options, name, property, hasName, funcs) {
         if (index == null) {
             // initial setup/insert/remove
             // create the empty boxes
-            for (let i = 0 /*list.children.length*/; i < value.length; i++) {
+            list.innerHTML = "";
+            for (let i = 0; i < value.length; i++) {
                 const box = makeVarBox(model, options, hasName);
                 list.appendChild(box);
                 if (!options.adminMode) {
