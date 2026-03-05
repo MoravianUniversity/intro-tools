@@ -243,23 +243,24 @@ function createVarsBox(model, options, name, property, hasName, funcs) {
         if (index == null) {
             // initial setup/insert/remove
             // TODO: could this be smarter and not re-make all items?
-            if (value == null || value.length === 0) { list.innerHTML = ""; }  // remove all boxes
-            else {
-                // get the right number of boxes
-                if (value.length > list.children.length) {
-                    for (let i = list.children.length; i < value.length; i++) {
+            list.innerHTML = "";
+            // if (value == null || value.length === 0) { list.innerHTML = ""; }  // remove all boxes
+            // else {
+            //     // get the right number of boxes
+            //     if (value.length > list.children.length) {
+                    for (let i = 0 /*list.children.length*/; i < value.length; i++) {
                         const box = makeVarBox(model, options, hasName);
                         list.appendChild(box);
                         if (!options.adminMode) {
                             updateItemRO(box, i, model.functions.get(key).get('readOnly') ?? false);
                         }
                     }
-                } else if (value.length < list.children.length) {
-                    for (let i = value.length; i < list.children.length; i++) { list.children[i].remove(); }
-                }
-                // update all boxes
-                for (const [i, v] of value.entries()) { updateVarBox(list, i, v, hasName); }
-            }
+            //     } else if (value.length < list.children.length) {
+            //         for (let i = value.length; i < list.children.length; i++) { list.children[i].remove(); }
+            //     }
+            //     // update all boxes
+            //     for (const [i, v] of value.entries()) { updateVarBox(list, i, v, hasName); }
+            // }
         } else if (prop == null) {
             // update single item with an entire object (this happens when a new property is added)
             updateVarBox(list, index, value, hasName);
