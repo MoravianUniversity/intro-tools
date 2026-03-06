@@ -16,10 +16,10 @@ export default defineConfig({
         'ipo': resolve(__dirname, 'ipo.html'),
         'grades': resolve(__dirname, 'grades.html'),
         'number-guess': resolve(__dirname, 'number-guess.html'),
+        // 'hangman-planner': resolve(__dirname, 'hangman-planner.html'),
         // 'bigrams-planner': resolve(__dirname, 'bigrams-planner.html'),
         'cell-phone-family-plan': resolve(__dirname, 'cell-phone-family-plan.html'),
-        // 'hangman-planner': resolve(__dirname, 'hangman-planner.html'),
-        // 'madlibs-planner': resolve(__dirname, 'madlibs-planner.html'),
+        'madlibs': resolve(__dirname, 'madlibs.html'),
       },
       output: {
         manualChunks: {

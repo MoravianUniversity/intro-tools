@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Mad Libs Function Planner</title>
+    <link rel="icon" type="image/png" href="favicon.png" />
+    <link rel="shortcut icon" href="favicon.ico" />
+    <style>
+        body { margin: 0; padding: 0; }
+        #planner {
+            position: absolute;
+            top: 0; left: 0;
+            bottom: 0; right: 0;
+            overflow: hidden;
+        }
+    </style>
+    <script type="module">
+    import init from "./function-planner.js";
+    window.addEventListener('DOMContentLoaded', () => {
+        init('planner', "madlibs", {
+            title: "Mad Libs",
+            minFunctions: 10,
+            minTestable: 2,
+        });
+    });
+    </script>
+</head>
+<body>
+    <div id="planner"></div>
+</body>
+</html>
