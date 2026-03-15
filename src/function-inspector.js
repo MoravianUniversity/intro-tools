@@ -242,17 +242,19 @@ function createVarsBox(model, options, name, property, hasName, funcs) {
         // assert _ === property
         if (index == null) {
             // initial setup/insert/remove
-            // create the empty boxes
             list.innerHTML = "";
-            for (let i = 0; i < value.length; i++) {
-                const box = makeVarBox(model, options, hasName);
-                list.appendChild(box);
-                if (!options.adminMode) {
-                    updateItemRO(box, i, model.functions.get(key).get('readOnly') ?? false);
+            if (value) {
+                // create the empty boxes
+                for (let i = 0; i < value.length; i++) {
+                    const box = makeVarBox(model, options, hasName);
+                    list.appendChild(box);
+                    if (!options.adminMode) {
+                        updateItemRO(box, i, model.functions.get(key).get('readOnly') ?? false);
+                    }
                 }
+                // update all boxes
+                for (const [i, v] of value.entries()) { updateVarBox(list, i, v, hasName); }
             }
-            // update all boxes
-            for (const [i, v] of value.entries()) { updateVarBox(list, i, v, hasName); }
         } else if (prop == null) {
             // update single item with an entire object (this happens when a new property is added)
             updateVarBox(list, index, value, hasName);
