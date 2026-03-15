@@ -4,6 +4,7 @@
  * Exports:
  *  - setupProblemChecking(model, options)
  *  - updateAllProblems(model, options={})
+ *  - updateInterNodeProblems(model, options={})
  *  - willFuncBecomeRecursive(model, from, to)
  *  - checkName(name, type="Function", field="name")
  *  - isFunctionNameNotUnique(model, key, name)
@@ -48,6 +49,7 @@ export function setupProblemChecking(model, options) {
             for (const fromKey of model.callingFunctions[key] || []) {
                 model.setFuncCallProblems(fromKey, key, linkProblems(model, fromKey, key));
             }
+            // a more selective veresion of updateInterNodeProblems()
             const name = (newValue || '').toString().trim();
             const functions = Array.from(model.functions);
             functions.filter(kf => kf[0] !== key && kf[1].get('name')?.toString()?.trim() === name).forEach(
@@ -207,6 +209,17 @@ export function willFuncBecomeRecursive(model, fromKey, toKey) {
         return false;
     }
     return dfs(toKey);
+}
+
+/**
+ * Updates the problems that are in a single function but are dependent on the properties of other
+ * functions. 
+ * @param {*} key 
+ */
+export function updateInterNodeProblems(model, options={}) {
+    const functions = Array.from(model.functions);
+    functions.forEach(kf => { model.setFuncProblems(kf[0], funcProblems(model, kf[0], options, false)); });
+    modelLinkProblems(model);
 }
 
 /**

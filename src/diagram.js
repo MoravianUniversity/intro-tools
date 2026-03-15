@@ -4,7 +4,7 @@ import { AvoidsLinksRouter } from './AvoidsLinksRouter.js';
 
 import { makeNameEditor, isBlankFunctionName } from './name-editor.js';
 import { pythonDefLine } from './save-load.js';
-import { updateAllProblems, willFuncBecomeRecursive } from './problem-checker.js';
+import { updateAllProblems, updateInterNodeProblems, willFuncBecomeRecursive } from './problem-checker.js';
 import { ALLOW_RECURSIVE, SHOW_COLLAPSE_BUTTON } from './settings.js';
 
 const DEFAULTS = {
@@ -284,6 +284,7 @@ export function setupDiagram(
             if (diagram.selection.contains(node)) { diagram.clearSelection(); }
             diagram.model.removeNodeData(node.data);
         }
+        updateInterNodeProblems(model, options);
     });
     model.addFuncListener('', (key, property, newValue) => {
         const node = diagram.findNodeForKey(key);
