@@ -283,6 +283,11 @@ function treeHasIO(model, key, checked = new Set()) {
     return Array.from(model.calledFunctions[key] || []).some(child => treeHasIO(model, child, checked));
 }
 function funcIOProblemsUpdate(model, key) {
+    const funcObj = model.functions.get(key);
+    // if we are loading a complete model right now, then some functions  might not exist when we
+    // try to update their problems, so we just skip those updates since they will be updated again
+    // later when the function is added 
+    if (!funcObj) { return; }
     const func = model.functions.get(key).toJSON();
     const curProblems = model.getFuncProblems(key);
     const ioProblems = funcIOProblems(model, key, func);
