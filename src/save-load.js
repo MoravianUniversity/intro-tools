@@ -322,7 +322,7 @@ function confirmDialog(title, text, confirmFunc, theme='auto') {
         showCancelButton: true,
         showCloseButton: true,
         focusConfirm: false,
-    }).then((confirm) => { if (confirm) { confirmFunc(); } });
+    }).then((res) => { if (res.isConfirmed) { confirmFunc(); } });
 }
 
 function mergeModel(model, data) {
