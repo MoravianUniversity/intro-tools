@@ -24,6 +24,10 @@ import helpIcon from '../images/help.svg';
 
 export const INFO_BOX_CLASS_NAME = 'func-planner-info-box';
 export const MAIN_CHECK_CLASS_NAME = 'func-planner-main-check';
+export const MODULE_DOCUMENTATION_MISSING_CLASS_NAME = 'func-planner-module-documentation-missing';
+export const AUTHOR_NAMES_MISSING_CLASS_NAME = 'func-planner-author-names-missing';
+export const MODULE_DOCUMENTATION_TOO_SHORT_CLASS_NAME = 'func-planner-module-documentation-too-short';
+export const AUTHOR_NAMES_MISSING_TOO_SHORT_NAME = 'func-planner-author-names-too-short';
 export const NUM_COUNT_CLASS_NAME = 'func-planner-count';
 export const NUM_TESTABLE_CLASS_NAME = 'func-planner-testable';
 
@@ -228,11 +232,20 @@ function makeInfoBox(parentDiv, model, options) {
     infoBox.innerHTML = '<table>' +
         `<tr class="${NUM_COUNT_CLASS_NAME}"><td>Functions:</td><td>0</td><td>/</td><td>${minFunctions}</td></td></tr>` +
         `<tr class="${NUM_TESTABLE_CLASS_NAME}"><td>Testable:</td><td>0</td><td>/</td><td>${minTestable}</td></tr>` +
-        `</table><span class="${MAIN_CHECK_CLASS_NAME} value-hidden value-error">Need a main function</span>`;
+        '</table>' +
+        `<div class="${MAIN_CHECK_CLASS_NAME} value-hidden value-error">Need a main function</div>` +
+        `<div class="${MODULE_DOCUMENTATION_MISSING_CLASS_NAME} value-hidden value-error">Program header is missing</div>` +
+        `<div class="${MODULE_DOCUMENTATION_TOO_SHORT_CLASS_NAME} value-hidden value-warn">Program header is too short</div>` +
+        `<div class="${AUTHOR_NAMES_MISSING_CLASS_NAME} value-hidden value-error">Author name(s) are missing</div>` +
+        `<div class="${AUTHOR_NAMES_MISSING_TOO_SHORT_NAME} value-hidden value-warn">Author name(s) are too short</div>`;
     parentDiv.getElementsByClassName('func-planner-widgets')[0].appendChild(infoBox);
     const countRow = infoBox.getElementsByClassName(NUM_COUNT_CLASS_NAME)[0];
     const testableRow = infoBox.getElementsByClassName(NUM_TESTABLE_CLASS_NAME)[0];
     const mainCheck = infoBox.getElementsByClassName(MAIN_CHECK_CLASS_NAME)[0];
+    const moduleDocMissing = infoBox.getElementsByClassName(MODULE_DOCUMENTATION_MISSING_CLASS_NAME)[0];
+    const moduleDocTooShort = infoBox.getElementsByClassName(MODULE_DOCUMENTATION_TOO_SHORT_CLASS_NAME)[0];
+    const authorNamesMissing = infoBox.getElementsByClassName(AUTHOR_NAMES_MISSING_CLASS_NAME)[0];
+    const authorNamesTooShort = infoBox.getElementsByClassName(AUTHOR_NAMES_MISSING_TOO_SHORT_NAME)[0];
     if (minFunctions <= 1) { countRow.classList.add('value-hidden'); }
     if (minTestable <= 0) { testableRow.classList.add('value-hidden'); }
     
@@ -243,6 +256,15 @@ function makeInfoBox(parentDiv, model, options) {
         mainCheck.classList.toggle('value-hidden', hasMain);
         model.clearModelDataProblem(null, "main");
         if (!hasMain) { model.recordModelDataProblem("error", "main", "There must be a main() function."); }
+        if (!options.callGraphOnly) {
+            // update the actual model data problems elsewhere, this is just for the info box display
+            const doc = (model.modelData.get('documentation')?.toString() || '').trim();
+            moduleDocMissing.classList.toggle('value-hidden', doc.length > 0);
+            moduleDocTooShort.classList.toggle('value-hidden', doc.length == 0 || (doc.length >= (options.minModuleDescLength ?? 25)));
+            const authors = (model.modelData.get('authors')?.toString() || '').trim();
+            authorNamesMissing.classList.toggle('value-hidden', authors.length > 0);
+            authorNamesTooShort.classList.toggle('value-hidden', authors.length == 0 || (authors.length >= 3));
+        }
 
         countRow.cells[1].textContent = functions.length;
         countRow.classList.toggle('value-error', functions.length < minFunctions);
@@ -254,7 +276,10 @@ function makeInfoBox(parentDiv, model, options) {
         testableRow.classList.toggle('value-error', nTestable < minTestable);
         model.clearModelDataProblem(null, "testable");
         if (nTestable < minTestable) { model.recordModelDataProblem("error", "testable", `There must be at least ${minTestable} testable functions.`); }
+
     }
+    model.addModelDataListener('documentation', update);
+    model.addModelDataListener('authors', update);
     model.addFuncAddListener(update);
     model.addFuncRemoveListener(update);
     model.addFuncListener('name', update);
