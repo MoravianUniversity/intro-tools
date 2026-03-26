@@ -1,31 +1,22 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>Hangman Function Planner</title>
+    <meta charset="UTF-8">
+    <title>Lab 8: Hangman Function Planner</title>
+    <link rel="icon" type="image/png" href="favicon.png" />
+    <link rel="shortcut icon" href="favicon.ico" />
     <style>
-        body {
-            margin: 0;
-            padding: 0;
-        }
+        body { margin: 0; padding: 0; }
         #planner {
             position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
+            top: 0; left: 0;
+            bottom: 0; right: 0;
             overflow: hidden;
         }
     </style>
-    <link rel="stylesheet" type="text/css" href="function-planner.css">
-    <script src="https://unpkg.com/gojs@3.0.22"></script>
-    <script src="https://cdn.jsdelivr.net/npm/sortablejs@latest/Sortable.min.js"></script>
-    <script src="https://unpkg.com/sweetalert2@11.22.0/dist/sweetalert2.min.js"></script>
-    <script src="https://unpkg.com/prismjs@1.30.0/components/prism-core.min.js"></script>
-    <script src="https://unpkg.com/prismjs@1.30.0/components/prism-python.min.js"></script>
-    <link rel="stylesheet" href="https://unpkg.com/sweetalert2@11.22.0/dist/sweetalert2.min.css">
     <script type="module">
     import init from "./function-planner.js";
-    let initialModel = {
+    const initialModel = {
         functions: [
             {
                 key: 1,
@@ -41,7 +32,7 @@
                 desc: "Read all of the words from the given file into a list.",
                 params: [{"name": "filename", "type": "str", "desc": "the name of the file to get the words from"}],
                 returns: [{"type": "list of str", "desc": "the words from the file"}],
-                code: "with open(filename, 'r') as file:\n    return file.read().split()",
+                code: "with open(filename) as file:\n    return file.read().split()",
                 showCode: true,
                 readOnly: ['name', 'desc', 'params', 'returns', 'io', 'testable', 'code'],
             },
@@ -52,7 +43,7 @@
                 params: [{"name": "word", "type": "str", "desc": "the word that is being guessed"}],
                 returns: [{"type": "bool", "desc": "True if the user won the game, False otherwise"}],
                 io: "indirect",
-                code: "# Create a word that is the same length as word but is all _ characters\nguessed_word = \"_\" * len(word)\n\n# Play rounds until the guessed word is complete or the user has 5 mistakes\nguessed_letters = []\nmistakes = 0\nwhile game_is_not_over(word, guessed_word, mistakes):\n    print_status(guessed_word, mistakes, guessed_letters)\n    guessed_word, mistakes = play_round(word, guessed_word, guessed_letters, mistakes)\n    print()\n\n# Return if the user won or lost\nreturn guessed_word == word",
+                code: "# Create a word that is the same length as word but is all _ characters\nguessed_word = \"_\" * len(word)\n\n# Play rounds until the guessed word is complete or the user has 5 mistakes\nguessed_letters = []\nmistakes = 0\nwhile not game_is_over(word, guessed_word, mistakes):\n    print_status(guessed_word, mistakes, guessed_letters)\n    guessed_word, mistakes = play_round(word, guessed_word, guessed_letters, mistakes)\n    print()\n\n# Return if the user won or lost\nreturn guessed_word == word",
                 showCode: true,
                 readOnly: ['name', 'desc', 'params', 'returns', 'io', 'testable', 'code'],
             },
@@ -68,15 +59,23 @@
                 returns: [{"type": "str", "desc": "the new guessed word with the guessed letter filled in"}],
                 io: "none",
                 testable: true,
-                code: "new_guessed_word = \"\"\nfor i, letter in enumerate(word):\n    if letter == guessed_letter:\n        new_guessed_word += guessed_letter\n    else:\n        new_guessed_word += guessed_word[i]\nreturn new_guessed_word",
+                code: "new_guessed_word = \"\"\nfor word_char, guessed_char in zip(word, guessed_word):\n    if word_char == guessed_letter:\n        new_guessed_word += guessed_letter\n    else:\n        new_guessed_word += guessed_char\nreturn new_guessed_word",
+                testCode: 'assert hangman.update_guessed_word("apple", "_____", "a") == "a____"\nassert hangman.update_guessed_word("apple", "a____", "p") == "app__"\nassert hangman.update_guessed_word("apple", "app__", "l") == "appl_"\nassert hangman.update_guessed_word("apple", "appl_", "e") == "apple"\nassert hangman.update_guessed_word("apple", "_____", "p") == "_pp__"\nassert hangman.update_guessed_word("hello", "_____", "e") == "_e___"\nassert hangman.update_guessed_word("hello", "_e___", "o") == "_e__o"\nassert hangman.update_guessed_word("str", "___", "z") == "___"\nassert hangman.update_guessed_word("str", "str", "r") == "str"\nassert hangman.update_guessed_word("str", "str", "p") == "str"',
                 showCode: true,
-                readOnly: ['name', 'desc', 'params', 'returns', 'io', 'testable', 'code'],
+                showTestCode: true,
+                readOnly: ['name', 'desc', 'params', 'returns', 'io', 'testable', 'code', 'testCode'],
             }
         ],
         calls: []
     };
-    document.addEventListener("DOMContentLoaded", () => {
-        init("planner", "Hangman", "hangman", initialModel, ["int", "str", "float", "bool", "list"], 9, 2);
+    window.addEventListener('DOMContentLoaded', () => {
+        init('planner', "hangman", {
+            initialModel: initialModel,
+            allowedTypes: ['int', 'float', 'str', 'bool', 'list'],
+            minFunctions: 9,
+            minTestable: 2,
+            adminMode: false,
+        });
     });
     </script>
 </head>
