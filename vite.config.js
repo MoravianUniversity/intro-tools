@@ -17,7 +17,7 @@ export default defineConfig({
         'grades': resolve(__dirname, 'grades.html'),
         'number-guess': resolve(__dirname, 'number-guess.html'),
         'hangman-planner': resolve(__dirname, 'hangman.html'),
-        // 'bigrams-planner': resolve(__dirname, 'bigrams-planner.html'),
+        'bigrams': resolve(__dirname, 'bigrams.html'),
         'cell-phone-family-plan': resolve(__dirname, 'cell-phone-family-plan.html'),
         'madlibs': resolve(__dirname, 'madlibs.html'),
       },
