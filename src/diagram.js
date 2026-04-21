@@ -50,57 +50,10 @@ export function setupDiagram(
         'toolManager.hoverDelay': 200,
         'toolManager.toolTipDuration': 1e10,
     });
-
-    // Define themes
-    diagram.themeManager.set('light', {
-        colors: {
-            text: '#111827',
-            link: '#111827',
-            stroke: '#111827',
-            'stroke-error': '#dc2626',
-            'stroke-warning': '#f59e0b',
-            shadow: '#9ca3af',
-            'selection': '#0ea5e9',
-            'selection-trans': 'rgba(14, 165, 233, 0.5)',
-            tempLink: '#309e70',
-            tempPort: '#309e70',
-            // lots of other colors built-in, see https://gojs.net/latest/api/symbols/Themes.html
-
-            // background colors for nodes based on user I/O and testability
-            'bg-testable': '#090',
-            'bg-validation': '#f60',
-            'bg-input': '#f90',
-            'bg-output': '#09f',
-            'bg-indirect': '#d1d5db',
-            'bg-none': '#d1d5db',
-            'bg-undefined': '#ff0000', // for debugging
-        },
-        fonts: {
-            text: "14px 'Monaco', 'Menlo', 'Ubuntu Mono', monospace", // 0.875rem - using a rem unit messes up rendering
-            normal: "14px 'Monaco', 'Menlo', 'Ubuntu Mono', monospace",
-            bold: "bold 14px 'Monaco', 'Menlo', 'Ubuntu Mono', monospace",
-            title: '2.5rem InterVariable, sans-serif',
-        },
-        numbers: {
-            selection: 2,
-        },
-    });
-
-    diagram.themeManager.set('dark', {
-        colors: {
-            text: '#f3f4f6',
-            link: '#f3f4f6',
-            stroke: '#f3f4f6',
-            shadow: '#6b7280',
-            tempLink: '#61ca9e',
-            tempPort: '#61ca9e',
-            'bg-indirect': '#374151',
-            'bg-none': '#374151',
-        }
-    });
+    updateDiagramTheme(diagram);
 
     function strokeColor(problems) {
-        return problems.some(p => p[0] === 'error') ? 'stroke-error' : (problems.length > 0 ? 'stroke-warning' : 'stroke');
+        return problems.some(p => p[0] === 'error') ? 'error-stroke' : (problems.length > 0 ? 'warning-stroke' : 'stroke');
     }
     function strokeColor2(ps, o) {
         return strokeColor((o.part.data.problems || []).concat(o.part.data.linkProblems || []));
@@ -327,6 +280,50 @@ export function setupDiagram(
     });
 
     return diagram;
+}
+
+export function updateDiagramTheme(diagram) {
+    const style = getComputedStyle(diagram.div);
+    function getColor(name, defaultValue) {
+        return style.getPropertyValue(`--${name}-color`).trim() || defaultValue;
+    }
+    function getFont(name, defaultValue) {
+        return style.getPropertyValue(`--${name}-font`).trim() || defaultValue;
+    }
+    diagram.themeManager.set('system', {
+        // The defaults are from the light theme, but users can override them with CSS variables
+        colors: {
+            text: getColor('text', '#111827'),
+            link: getColor('link', getColor('stroke', '#111827')),
+            stroke: getColor('stroke', '#111827'),
+            'error-stroke': getColor('error-stroke', '#dc2626'),
+            'warning-stroke': getColor('warning-stroke', '#f59e0b'),
+            shadow: getColor('shadow', '#9ca3af'),
+            'selection': getColor('selection', '#0ea5e9'),
+            'selection-trans': getColor('selection-trans', 'rgba(14, 165, 233, 0.5)'),
+            tempLink: getColor('temp-link', '#309e70'),
+            tempPort: getColor('temp-port', '#309e70'),
+            // lots of other colors built-in, see https://gojs.net/latest/api/symbols/Themes.html
+
+            // background colors for nodes based on user I/O and testability
+            'bg-testable': getColor('bg-testable', '#090'),
+            'bg-validation': getColor('bg-validation', '#f60'),
+            'bg-input': getColor('bg-input', '#f90'),
+            'bg-output': getColor('bg-output', '#09f'),
+            'bg-indirect': getColor('bg-indirect', '#d1d5db'),
+            'bg-none': getColor('bg-none', '#d1d5db'),
+            'bg-undefined': '#ff0000', // for debugging
+        },
+        fonts: {
+            text: getFont('diagram-text', "14px 'Monaco', 'Menlo', 'Ubuntu Mono', monospace"),
+            normal: getFont('diagram-text', "14px 'Monaco', 'Menlo', 'Ubuntu Mono', monospace"),
+            bold: getFont('diagram-bold', "bold 14px 'Monaco', 'Menlo', 'Ubuntu Mono', monospace"),
+            title: getFont('diagram-title', '2.5rem InterVariable, sans-serif'),
+        },
+        numbers: {
+            selection: 2,
+        },
+    });
 }
 
 function createToolTip(rootElem) {

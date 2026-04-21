@@ -7,6 +7,7 @@ import Swal from 'sweetalert2';
 
 import { reset, exportToPython, exportPythonTests, saveJSON, loadJSON, importJSON } from './save-load.js';
 import { setSettings, SHOW_COLLAPSE_BUTTON, ALLOW_RECURSIVE } from './settings.js';
+import { updateDiagramTheme } from './diagram.js';
 import { loadSVG, htmlToNode, isMacOS } from './utils.js';
 
 import zoomIcon from '../images/magnifier.svg';
@@ -157,13 +158,13 @@ function makeThemeToggle(parentDiv, options, diagram) {
 </label>`);
     parentDiv.appendChild(button);
     const toggle = button.querySelector('input[type="checkbox"]');
-    diagram.themeManager.currentTheme = checked ? 'dark' : 'light';
     parentDiv.classList.toggle('dark-mode', checked);
+    updateDiagramTheme(diagram);
     toggle.addEventListener('change', (e) => {
         const theme = e.target.checked ? 'dark' : 'light';
         localStorage.setItem('func-planner-theme', theme);
-        diagram.themeManager.currentTheme = theme;
         parentDiv.classList.toggle('dark-mode', e.target.checked);
+        updateDiagramTheme(diagram);
         options.theme = theme;
     });
 }

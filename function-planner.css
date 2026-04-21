@@ -11,10 +11,14 @@ div:where(.swal2-container) img:where(.swal2-image) { margin: 2em auto 0 !import
     --placeholder-color: #6b7280;          /* gray-500 */
     --stroke-color: var(--text-color);
     --error-color: #b61f1f;
-    --error-stroke: #dc2626;
+    --error-stroke-color: #dc2626;
     --warning-color: #f6af00;
-    --warning-stroke: #f59e0b;
+    --warning-stroke-color: #f59e0b;
     --shadow-color: #9ca3af;               /* gray-400 */
+    --selection-color: #0ea5e9;
+    --selection-trans-color: rgba(14, 165, 233, 0.5);
+    --temp-link-color: #309e70;
+    --temp-port-color: #309e70;
 
     --bg-testable-color: #090;
     --bg-validation-color: #f60;
@@ -38,6 +42,10 @@ div:where(.swal2-container) img:where(.swal2-image) { margin: 2em auto 0 !import
     --insp-var-ghost-color: #eceef1;       /* gray-150 */
     --insp-var-input-border-color: #555;
 
+    --diagram-text-font: 14px 'Monaco', 'Menlo', 'Ubuntu Mono', monospace; /* 0.875rem - using a rem unit messes up rendering */
+    --diagram-bold-font: bold 14px 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+    --diagram-title-font: 2.5rem InterVariable, sans-serif;
+
     color: var(--text-color);
 }
 .func-planner.dark-mode {
@@ -49,6 +57,8 @@ div:where(.swal2-container) img:where(.swal2-image) { margin: 2em auto 0 !import
     --error-color: #dc2626;
     --warning-color: #ffd600;
     --shadow-color: #6b7280;               /* gray-500 */
+    --temp-link-color: #61ca9e;
+    --temp-port-color: #61ca9e;
 
     --bg-indirect-color: #374151;          /* gray-700 */
     --bg-none-color: #374151;              /* gray-700 */
@@ -91,12 +101,12 @@ div:where(.swal2-container) img:where(.swal2-image) { margin: 2em auto 0 !import
     span.ghost { visibility: hidden; height: 0; white-space: pre; }
 }
 .func-planner .function-name-editor.error {
-    border-color: var(--error-stroke);
-    box-shadow: 0 0 10px var(--error-stroke);
+    border-color: var(--error-stroke-color);
+    box-shadow: 0 0 10px var(--error-stroke-color);
 }
 .func-planner .function-name-editor.warning {
-    border-color: var(--warning-stroke);
-    box-shadow: 0 0 10px var(--warning-stroke);
+    border-color: var(--warning-stroke-color);
+    box-shadow: 0 0 10px var(--warning-stroke-color);
 }
 .func-planner .function-name-editor::after {
     content: '()';
@@ -176,12 +186,12 @@ div:where(.swal2-container) img:where(.swal2-image) { margin: 2em auto 0 !import
     div.value-warn { color: var(--warning-color); }
     table { border-collapse: collapse; }
     td:first-child { font-weight: bold; padding-right: 0.25em; }
-    td:nth-child(3), td:nth-child(4) { font-size: 0.75em; vertical-align: bottom; }
+    td:nth-child(3), td:nth-child(4) { font-size: 0.8em; vertical-align: bottom; }
     tr.value-error td:nth-child(2) { color: var(--error-color); }
     tr:not(.value-error) :is(td:nth-child(3), td:nth-child(4)) { display: none; }
 }
-.func-planner .func-planner-info-box:has(.value-error:not(.value-hidden)) { border-color: var(--error-stroke); box-shadow: 0 0 10px var(--error-stroke); }
-.func-planner .func-planner-info-box:has(.value-warn:not(.value-hidden)):not(:has(.value-error:not(.value-hidden))) { border-color: var(--warning-stroke); box-shadow: 0 0 10px var(--warning-stroke); }
+.func-planner .func-planner-info-box:has(.value-error:not(.value-hidden)) { border-color: var(--error-stroke-color); box-shadow: 0 0 10px var(--error-stroke-color); }
+.func-planner .func-planner-info-box:has(.value-warn:not(.value-hidden)):not(:has(.value-error:not(.value-hidden))) { border-color: var(--warning-stroke-color); box-shadow: 0 0 10px var(--warning-stroke-color); }
 .func-planner .func-planner-info-box:not(:has(table tr:not(.value-hidden))):not(:has(> div:not(.value-hidden))) { display: none; }
 
 .func-planner .func-planner-fab {
@@ -280,9 +290,9 @@ div:where(.swal2-container) img:where(.swal2-image) { margin: 2em auto 0 !import
         0 -1px 0 var(--text-color)
         ;
 }
-.func-planner ul.problems li.error { background-color: var(--error-stroke); }
+.func-planner ul.problems li.error { background-color: var(--error-stroke-color); }
 .func-planner ul.problems li.error:before { content: "❗"; }
-.func-planner ul.problems li.warning { background-color: var(--warning-stroke); }
+.func-planner ul.problems li.warning { background-color: var(--warning-stroke-color); }
 .func-planner ul.problems li.warning:before { content: "⚠️"; }
 
 .func-planner .tooltip-container {
