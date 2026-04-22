@@ -69,13 +69,21 @@ export function setupDiagram(
         toolTip: createToolTip(rootElem),
 
         // hide the expand/collapse button when not selected or hovered
-        mouseEnter: (e, node) => ((node.findObject('BUTTON_EXPAND') ?? {}).opacity = 1),
-        mouseLeave: (e, node) => ((node.findObject('BUTTON_EXPAND') ?? {}).opacity = node.isSelected ? 1 : 0),
+        // and change the node appearance on hover to indicate interactivity
+        mouseEnter: (e, node) => {
+            (node.findObject('BUTTON_EXPAND') ?? {}).opacity = 1;
+            (node.findObject('SHAPE') ?? {}).opacity = 1;
+        },
+        mouseLeave: (e, node) => {
+            (node.findObject('BUTTON_EXPAND') ?? {}).opacity = node.isSelected ? 1 : 0;
+            (node.findObject('SHAPE') ?? {}).opacity = 0.6;
+        }
     }).add(
         new go.Panel("Auto", { name: 'BODY' }).add(
             new go.Shape('RoundedRectangle', {
                 name: 'SHAPE',
                 strokeWidth: 2,
+                opacity: 0.6,
                 cursor: 'crosshair',
                 portId: '',
                 fromLinkable: true, fromLinkableSelfNode: true, fromLinkableDuplicates: false,
@@ -128,7 +136,8 @@ export function setupDiagram(
         // curve: go.Link.Bezier,
         // smoothness: 0.1,
         corner: 10,
-        // TODO: layerName: 'Background',
+        // opacity: 0.5,
+        layerName: 'Background',
         doubleClick: (e, link) => {
             // Reverse the link direction on double-click
             const from = link.fromNode;
@@ -142,9 +151,17 @@ export function setupDiagram(
             reversingLink = false;
             updateAllProblems(model, options);
         },
+        mouseEnter: (e, link) => {
+            (link.findObject('STROKE') || {}).strokeWidth = 4;
+            (link.findObject('HEAD') || {}).scale = 1.8;
+        },
+        mouseLeave: (e, link) => {
+            (link.findObject('STROKE') || {}).strokeWidth = 2;
+            (link.findObject('HEAD') || {}).scale = 1.4;
+        },
     }).add(
-        new go.Shape({ strokeWidth: 2 }).themeData('stroke', 'problems', null, strokeColor),
-        new go.Shape({ toArrow: 'Standard', scale: 1.4, stroke: null })
+        new go.Shape({ name: 'STROKE', strokeWidth: 2 }).themeData('stroke', 'problems', null, strokeColor),
+        new go.Shape({ name: 'HEAD', toArrow: 'Standard', scale: 1.4, stroke: null })
             .themeData('fill', 'problems', null, strokeColor)
     );
     // TODO: make the vertical links work better with the LayeredDigraphLayout
@@ -173,11 +190,13 @@ export function setupDiagram(
     ));
 
     // Group template
+    const backgroundLayer = diagram.findLayer("Background");
+    diagram.addLayerBefore(new go.Layer({ name: "Groups" }), backgroundLayer);
     diagram.groupTemplate = new go.Group("Horizontal", {
         selectable: false,
         isShadowed: true,
         shadowOffset: new go.Point(0, 2),
-        layerName: 'Background',
+        layerName: 'Groups',
         layout: new go.LayeredDigraphLayout({ direction: 90, layerSpacing: 50, columnSpacing: 30 }),
     }).add(
         new go.TextBlock({
