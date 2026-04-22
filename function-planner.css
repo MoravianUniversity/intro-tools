@@ -125,27 +125,19 @@ div:where(.swal2-container) img:where(.swal2-image) { margin: 2em auto 0 !import
 .func-planner .function-name-editor:has(input:placeholder-shown)::after {
     color: var(--placeholder-color); opacity: 1; font-style: italic;
 }
-
-.func-planner .func-planner-widgets {
+.func-planner .func-planner-buttons, .func-planner .func-planner-info-box {
     position: absolute;
-    top: 0.75em; left: 0.75em;
     z-index: 100;
-    display: flex;
-    flex-direction: column;
-    align-items: left;
-    justify-content: left;
-    pointer-events: none;
-}
-.func-planner .button-holder, .func-planner .func-planner-info-box {
     padding: 0.5em;
     border: 1px solid var(--stroke-color);
     border-radius: 0.5em;
     background-color: var(--tool-background-color);
     box-shadow: 0 0 0.5em var(--shadow-color);
     width: max-content;
-    pointer-events: auto;
 }
-.func-planner .button-holder {
+
+.func-planner .func-planner-buttons {
+    top: 2.25em; left: 0.75em;
     display: flex;
     flex-direction: column;
     gap: 0.5em;
@@ -183,12 +175,13 @@ div:where(.swal2-container) img:where(.swal2-image) { margin: 2em auto 0 !import
     button:hover:not(:disabled) { color: var(--button-text-hover-color); background-color: var(--button-hover-color); border-color: var(--button-hover-color); border-style: inset; }
     button:disabled .func-planner-icon { filter: none; }
 }
-.func-planner .button-holder:not(:hover) button {
+.func-planner .func-planner-buttons:not(:hover) button {
     width: 3em;
     span { display: none; }
 }
+
 .func-planner .func-planner-info-box {
-    margin-top: 0.75em;
+    top: 0.75em; right: 0.75em;
     .value-hidden { display: none; }
     div { padding: 0.1em 0 ; }
     div.value-error { color: var(--error-color); }

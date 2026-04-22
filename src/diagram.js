@@ -36,6 +36,7 @@ export function setupDiagram(
     rootElem.appendChild(diagramDiv);
     let reversingLink = false;
 
+    go.Diagram.licenseKey = "ACADEMIC"
     const diagram = new go.Diagram(diagramDiv, {
         allowCopy: false,
         allowMove: false,

@@ -42,20 +42,16 @@ export function makeAllButtons(diagram, model, options={}) {
     makeThemeToggle(parentDiv, options, diagram);
     makeInstructionsButton(parentDiv);
     makeWidgetButtons(parentDiv, diagram, model, options);
-    makeInfoBox(parentDiv, model, options);
+    makeInfoBox(diagram.div, model, options); // use diagram.div so that it can move with the resized inspector pane
 }
 
 function makeWidgetButtons(parentDiv, diagram, model, options={}) {
     const isMac = isMacOS()
     const ctrl = isMac ? '⌘' : 'CTRL+';
 
-    const widgets = document.createElement('div');
-    widgets.className = 'func-planner-widgets';
-    parentDiv.appendChild(widgets);
-
-    const holder = document.createElement('div');
-    holder.className = 'button-holder';
-    widgets.appendChild(holder);
+    const buttons = document.createElement('div');
+    buttons.className = 'func-planner-buttons';
+    parentDiv.appendChild(buttons);
 
     function undo() { if (model.undoManager.canUndo()) { model.undoManager.undo(); } }
     function redo() { if (model.undoManager.canRedo()) { model.undoManager.redo(); } }
@@ -78,12 +74,12 @@ function makeWidgetButtons(parentDiv, diagram, model, options={}) {
     }, true); // require capture to get before GoJS (even though its UndoManager is disabled, it still captures keys)
 
     model.addListener('synced', () => { setTimeout(() => { diagram.zoomToFit(); }, 0); });
-    addButton(holder, zoomIcon, '', `Zoom to Fit (${ctrl}R)`, () => { diagram.zoomToFit(); });
-    addButton(holder, addIcon, 'no-outline', `Add Function (${ctrl}F)`, () => { model.addFunc(); });
+    addButton(buttons, zoomIcon, '', `Zoom to Fit (${ctrl}R)`, () => { diagram.zoomToFit(); });
+    addButton(buttons, addIcon, 'no-outline', `Add Function (${ctrl}F)`, () => { model.addFunc(); });
 
     // undo/redo buttons
-    const undoButton = addButton(holder, undoIcon, 'no-outline', `Undo (${ctrl}Z)`, undo);
-    const redoButton = addButton(holder, redoIcon, 'no-outline', `Redo (⇧${ctrl}Z)`, redo);
+    const undoButton = addButton(buttons, undoIcon, 'no-outline', `Undo (${ctrl}Z)`, undo);
+    const redoButton = addButton(buttons, redoIcon, 'no-outline', `Redo (⇧${ctrl}Z)`, redo);
     function updateUndoRedoButtons() {
         undoButton.disabled = !model.undoManager.canUndo();
         redoButton.disabled = !model.undoManager.canRedo();
@@ -94,19 +90,19 @@ function makeWidgetButtons(parentDiv, diagram, model, options={}) {
     updateUndoRedoButtons();
 
     // reset button
-    addButton(holder, resetIcon, 'no-outline', `Reset`, () => { reset(model, options); });
+    addButton(buttons, resetIcon, 'no-outline', `Reset`, () => { reset(model, options); });
 
     // export/import buttons
-    addButton(holder, pythonIcon, '', 'Create Python Template', () => { exportToPython(model, options); });
-    const testButton = addButton(holder, unitTestsIcon, '', 'Generate Python Unit Tests', () => { exportPythonTests(model, options); });
+    addButton(buttons, pythonIcon, '', 'Create Python Template', () => { exportToPython(model, options); });
+    const testButton = addButton(buttons, unitTestsIcon, '', 'Generate Python Unit Tests', () => { exportPythonTests(model, options); });
     model.addFuncListener('testable', () => {
         testButton.disabled = Array.from(model.functions.values()).every(n => !n.get('testable'));
     });
     testButton.disabled = Array.from(model.functions.values()).every(n => !n.get('testable'));
     // TODO: only have these available if not connected to a shared Yjs model
-    addButton(holder, saveIcon, 'no-outline', 'Save as JSON', () => { saveJSON(model, options); });
-    addButton(holder, loadIcon, 'no-outline', 'Load from JSON', () => { loadJSON(model, options); });
-    // addButton(holder, mergeIcon, 'no-outline', 'Merge from JSON', () => { importJSON(model, options); });
+    addButton(buttons, saveIcon, 'no-outline', 'Save as JSON', () => { saveJSON(model, options); });
+    addButton(buttons, loadIcon, 'no-outline', 'Load from JSON', () => { loadJSON(model, options); });
+    // addButton(buttons, mergeIcon, 'no-outline', 'Merge from JSON', () => { importJSON(model, options); });
 }
 
 function addButton(holder, icon, classes, name, callback) {
@@ -239,7 +235,7 @@ function makeInfoBox(parentDiv, model, options) {
         `<div class="${MODULE_DOCUMENTATION_TOO_SHORT_CLASS_NAME} value-hidden value-warn">Program header is too short</div>` +
         `<div class="${AUTHOR_NAMES_MISSING_CLASS_NAME} value-hidden value-error">Author name(s) are missing</div>` +
         `<div class="${AUTHOR_NAMES_MISSING_TOO_SHORT_NAME} value-hidden value-warn">Author name(s) are too short</div>`;
-    parentDiv.getElementsByClassName('func-planner-widgets')[0].appendChild(infoBox);
+    parentDiv.appendChild(infoBox);
     const countRow = infoBox.getElementsByClassName(NUM_COUNT_CLASS_NAME)[0];
     const testableRow = infoBox.getElementsByClassName(NUM_TESTABLE_CLASS_NAME)[0];
     const mainCheck = infoBox.getElementsByClassName(MAIN_CHECK_CLASS_NAME)[0];
