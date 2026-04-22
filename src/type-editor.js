@@ -498,10 +498,14 @@ class TypeEditor {
         container.appendChild(modeSelect);
 
         // Add change listener
-        modeSelect.addEventListener('change', (e) => this.#updateContainerMode(container, e.target.value));
+        modeSelect.addEventListener('change', (e) => {
+            this.#updateContainerMode(container, e.target.value);
+            this.#updateModeWarning(container, this.#getContainerType(container), e.target.value);
+        });
 
         // Initialize with default mode
         this.#updateContainerMode(container, defaultMode);
+        this.#updateModeWarning(container, this.#getContainerType(container), defaultMode);
     }
 
     #updateContainerMode(container, mode) {
@@ -521,11 +525,41 @@ class TypeEditor {
             
             this.#createTypeDropdown(nestedWrapper);
         } else {
-            // Multiple type dropdowns with add/remove buttons, all at same indent
+            // Multiple type dropdowns with add/remove buttons, all at same indent.
+            // "with" starts with at least two entries.
             this.#addWithType(container, true);
+            this.#addWithType(container, false);
         }
         
         this.#notifyChange();
+    }
+
+    #getContainerType(container) {
+        const typeSelect = container.querySelector(':scope > select');
+        return typeSelect ? typeSelect.value : '';
+    }
+
+    #updateModeWarning(container, selectedType, mode) {
+        const existingWarning = container.querySelector('.mode-warning');
+        if (existingWarning) {
+            existingWarning.remove();
+        }
+
+        let warningText = '';
+        if (selectedType === 'tuple' && mode === 'of') {
+            warningText = '"tuple with" is preferred since it has a fixed number of elements';
+        } else if (selectedType === 'list' && mode === 'with') {
+            warningText = '"list of" is preferred since it has a variable number of elements';
+        }
+
+        if (!warningText) {
+            return;
+        }
+
+        const warning = document.createElement('div');
+        warning.className = 'mode-warning';
+        warning.textContent = warningText;
+        container.appendChild(warning);
     }
 
     #addWithType(container, isFirst = false) {
@@ -554,6 +588,12 @@ class TypeEditor {
         removeBtn.className = 'remove-type-btn';
         removeBtn.textContent = '−';
         removeBtn.addEventListener('click', () => {
+            const nestedWrappers = Array.from(container.children).filter(child =>
+                child.classList && child.classList.contains('indented-nested')
+            );
+            if (nestedWrappers.length <= 2) {
+                return;
+            }
             // Remove the entire wrapper
             itemWrapper.remove();
             this.#updateWithButtonStates(container);
@@ -580,7 +620,7 @@ class TypeEditor {
         nestedWrappers.forEach(wrapper => {
             const removeBtn = wrapper.querySelector('.remove-type-btn');
             if (removeBtn) {
-                removeBtn.disabled = nestedWrappers.length <= 1;
+                removeBtn.disabled = nestedWrappers.length <= 2;
             }
         });
     }
@@ -724,7 +764,7 @@ class TypeEditor {
                 return {
                     type: 'tuple',
                     mode: 'with',
-                    types: [{ type: '' }]
+                    types: [{ type: '' }, { type: '' }]
                 };
             } else if (typeStr === 'set') {
                 return {
@@ -1078,9 +1118,13 @@ class TypeEditor {
             modeSelect.value = parsed.mode;
             
             // Add change event listener so mode selection works after parsing
-            modeSelect.addEventListener('change', (e) => this.#updateContainerMode(container, e.target.value));
+            modeSelect.addEventListener('change', (e) => {
+                this.#updateContainerMode(container, e.target.value);
+                this.#updateModeWarning(container, this.#getContainerType(container), e.target.value);
+            });
             
             container.appendChild(modeSelect);
+            this.#updateModeWarning(container, parsed.type, parsed.mode);
 
             if (parsed.mode === 'of') {
                 const nestedWrapper = document.createElement('div');
@@ -1090,7 +1134,11 @@ class TypeEditor {
                 this.#buildTypeFromParsed(parsed.nested, nestedWrapper);
             } else {
                 // "with" mode
-                parsed.types.forEach((typeObj, index) => {
+                const withTypes = parsed.types.length >= 2
+                    ? parsed.types
+                    : [...parsed.types, ...Array(2 - parsed.types.length).fill({ type: '' })];
+
+                withTypes.forEach((typeObj) => {
                     const itemWrapper = document.createElement('div');
                     itemWrapper.className = 'indented-nested';
                     container.appendChild(itemWrapper);
@@ -1112,6 +1160,12 @@ class TypeEditor {
                     removeBtn.className = 'remove-type-btn';
                     removeBtn.textContent = '−';
                     removeBtn.addEventListener('click', () => {
+                        const nestedWrappers = Array.from(container.children).filter(child =>
+                            child.classList && child.classList.contains('indented-nested')
+                        );
+                        if (nestedWrappers.length <= 2) {
+                            return;
+                        }
                         itemWrapper.remove();
                         this.#updateWithButtonStates(container);
                         this.#notifyChange();

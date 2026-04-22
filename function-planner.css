@@ -535,6 +535,7 @@ div:where(.swal2-container) img:where(.swal2-image) { margin: 2em auto 0 !import
     .nested-leader-container, .dict-label { display: inline-block; margin: 6px 5px 5px 0; vertical-align: top; }
     .dict-label { line-height: 24px; }
     .dict-connector { display: block; margin-left: 30px; }
+    .mode-warning { display: block; font-size: 0.8rem; color: #a46600; max-width: 12em; }
     .add-type-btn { color: green; }
     .remove-type-btn { color: red; }
 }
