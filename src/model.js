@@ -26,7 +26,8 @@ import * as Y from 'yjs';
 import { IndexeddbPersistence } from 'y-indexeddb';
 import diff from 'fast-diff';
 
-const MODEL_DATA_TEXTS = ['documentation', 'authors', 'testDocumentation', 'globalCode'];
+const MODEL_DATA_TEXTS = ['documentation', 'testDocumentation', 'globalCode'];
+const MODEL_DATA_ARRAYS = ['authors']; // NOTE: this assumes array of strings, not array of anything like in functions
 const FUNC_DATA_TEXTS = ['name', 'desc', 'code', 'testCode'];
 const FUNC_DATA_ARRAYS = ['params', 'returns'];
 
@@ -59,6 +60,13 @@ export class Model {
             }
             this.#fireListeners(this.#listeners['synced']);
             this.synced = true;
+
+            // Migrate authors from old string format to new array format if needed
+            console.log(`Model ${this.id} synced with IndexedDB, current state:`, this.exportModel());
+            const authors = this.modelData.get('authors');
+            if (typeof authors === 'string' || authors instanceof Y.Text) {
+                this.updateModelData('authors', authors);
+            }
         });
 
         // setup undo/redo after initial data is loaded
@@ -99,7 +107,7 @@ export class Model {
             // import modelData
             for (const [prop, value] of Object.entries(data || {})) {
                 if (['functions', 'calls'].includes(prop)) { continue; }
-                this.modelData.set(prop, value);
+                this.updateModelData(prop, value);
             }
 
             // import functions
@@ -209,7 +217,7 @@ export class Model {
      */
     // modelData has:
     //    documentation (Y.Text)
-    //    authors (Y.Text)
+    //    authors (Y.Array of Y.Text; supports [#] in property for index access; value of null deletes the item)
     //    testDocumentation (Y.Text)
     //    globalCode (Y.Text)
     //    showTestDocumentation (boolean)
@@ -217,6 +225,32 @@ export class Model {
     updateModelData(property, value, cursorPos=null) {
         if (MODEL_DATA_TEXTS.includes(property)) {
             updateText(this.modelData, property, value, cursorPos);
+        } else if (MODEL_DATA_ARRAYS.includes(property)) {
+            // replace entire array
+            // TODO: clears array?
+            if (typeof value === 'string' || value instanceof Y.Text) { value = [value]; }
+            this.modelData.set(property, new Y.Array(value.map(v => typeof v === 'string' ? new Y.Text(v) : v)));
+        } else if (MODEL_DATA_ARRAYS.some(arr => property.startsWith(arr))) {
+            // update specific index in array
+            const result = /^(\w+)\[(\d+)\]$/.exec(property);
+            if (result) {
+                const [, prop, index] = result;
+                const idx = +index;
+                if (value == null) {
+                    this.modelData.get(prop)?.delete(idx, 1);
+                } else {
+                    this.model.transact(() => {
+                        const needNewArray = !this.modelData.has(prop);
+                        const arr = this.modelData.get(prop) ?? new Y.Array();
+                        if (needNewArray) { this.modelData.set(prop, arr); }
+                        if (!needNewArray && idx < arr.length) {
+                            updateText(arr, index, value, cursorPos);
+                        } else {
+                            arr.insert(index, [typeof value === 'string' ? new Y.Text(value) : value]);
+                        }
+                    });
+                }
+            }
         } else {
             this.modelData.set(property, value);
         }
@@ -457,6 +491,7 @@ export class Model {
     //           updateFunc(key, 'returns[0].name', '...')
     //    io (fixed string)
     //    testable (boolean)
+    //    owner (string)
     //    showCode (boolean)
     //    showTestCode (boolean)
     //    readOnly (boolean or array of fixed strings; not a Y.Array since edited infrequently)
@@ -473,7 +508,7 @@ export class Model {
                     const needNewArray = !func.has(type);
                     const arr = func.get(type) ?? new Y.Array();
                     if (needNewArray) { func.set(type, arr); }
-                    if (!needNewArray &&  index < arr.length) {
+                    if (!needNewArray && index < arr.length) {
                         const ymap = arr.get(index);
                         if (subprop == null) {
                             // update all subproperties
@@ -512,7 +547,7 @@ export class Model {
      * @returns {[string, number|null, string|null]} value of the property
      */
     parseFuncProperty(property) {
-        const result = /(params|returns)(\[(\d+)\](\.(name|desc|type))?)?/.exec(property);
+        const result = /^(params|returns)(\[(\d+)\](\.(name|desc|type))?)?$/.exec(property);
         if (result) {
             const [, type, , index, , subprop] = result;
             return [type, index ? parseInt(index) : null, subprop ?? null];
@@ -773,9 +808,9 @@ export class Model {
 }
 
 /**
- * Update a Y.Text property in a Y.Map.
- * @param {Y.Map} ymap 
- * @param {string} property 
+ * Update a Y.Text property in a Y.Map or Y.Array.
+ * @param {Y.Map|Y.Array} ymap 
+ * @param {string|number} property 
  * @param {string|*} value 
  * @param {number|object|null} cursorPos 
  */
@@ -786,8 +821,14 @@ function updateText(ymap, property, value, cursorPos=null) {
             const cur = ytext.toString();
             if (cur === value) { return; } // no change
             ytext.applyDelta(diffToDelta(diff(cur, value, cursorPos)));
-        } else {
+        } else if (ymap instanceof Y.Map) {
             ymap.set(property, new Y.Text(value));
+        } else if (ymap instanceof Y.Array) {
+            const index = +property;
+            ymap.doc.transact(() => {
+                ymap.delete(index, 1);
+                ymap.insert(index, [new Y.Text(value)]);
+            });
         }
     }
 }

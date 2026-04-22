@@ -42,6 +42,15 @@ div:where(.swal2-container) img:where(.swal2-image) { margin: 2em auto 0 !import
     --insp-var-ghost-color: #eceef1;       /* gray-150 */
     --insp-var-input-border-color: #555;
 
+    --group-1-color: #e41a1c40;
+    --group-2-color: #377eb840;
+    --group-3-color: #4daf4a40;
+    --group-4-color: #984ea340;
+    --group-5-color: #ff7f0040;
+    --group-6-color: #ffff3340;
+    --group-7-color: #a6562840;
+    --group-8-color: #f781bf40;
+
     --diagram-text-font: 14px 'Monaco', 'Menlo', 'Ubuntu Mono', monospace; /* 0.875rem - using a rem unit messes up rendering */
     --diagram-bold-font: bold 14px 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
     --diagram-title-font: 2.5rem InterVariable, sans-serif;
@@ -355,11 +364,12 @@ div:where(.swal2-container) img:where(.swal2-image) { margin: 2em auto 0 !import
 
     /*:invalid, :user-invalid { background-color: rgb(from var(--error-color) r g b / 0.2) !important; border: 1px solid var(--error-color) !important; }*/
     input, textarea, select { border: 1px solid var(--insp-var-input-border-color); background-color: var(--tool-background-color); color: var(--text-color); }
+    label input + p, label select + p { font-size: 0.8em; margin-top: 0; }
     textarea { field-sizing: content; }
     input::placeholder, textarea::placeholder, select:has(option[value=""]:checked) { color: var(--placeholder-color); opacity: 1; font-style: italic; }
     input.warning, textarea.warning, select.warning { background-color: rgb(from var(--warning-color) r g b / 0.2); border: 1px solid var(--warning-color) !important; accent-color: var(--warning-color); }
     input.error, textarea.error, select.error { background-color: rgb(from var(--error-color) r g b / 0.2); border: 1px solid var(--error-color) !important; accent-color: var(--error-color); }
-    select.func-io { field-sizing: content; }
+    select.func-io, select.func-owner { field-sizing: content; }
     .func-code-box textarea { font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace; font-size: 0.9em; white-space: pre; tab-size: 4; }
     .func-code-box textarea::placeholder { color: #aaa; }
     .func-code-box label, label:has(textarea) {
@@ -371,9 +381,49 @@ div:where(.swal2-container) img:where(.swal2-image) { margin: 2em auto 0 !import
     label:has(.func-testable:checked) ~ .func-code-box:has(.func-testCode) { display: block; }
     label:has(input[class*="func-show"]) { margin-top: 0; font-size: 0.8em; font-weight: normal; span { font-weight: normal; } }
 
+    /* Add and Remove Buttons */
+    .func-button {
+        margin: 0; padding: 0;
+        box-sizing: border-box;
+        cursor: pointer;
+        width: 1.25em; height: 1.25em;
+        font-weight: bold;
+        z-index: 110;
+    }
+    .func-button svg { width: 0.75em; height: 0.75em; display: block; margin: 0.2em auto 0.15em auto; }
+    .func-button-remove { color: red; }
+    .func-button-add { color: green; }
+    .func-button-disabled { display: none; }
+
+    /* Module-level options */
+    label:has(.func-authors) {
+        display: flex; align-items: top; gap: 0.25em;
+        span { width: 2em; }
+    }
+    .func-authors {
+        width: calc(100% - 2.5em);
+        display: flex; flex-direction: column; gap: 0.25em;
+        .func-authors-list {
+            display: flex; flex-direction: column; gap: 0.5em;
+            .func-author-row {
+                display: flex; gap: 0em; align-items: center;
+                input { flex: 1 1 auto; min-width: 0; }
+            }
+        }
+        .func-authors-read-only .func-button { display: none; }
+    }
+    .func-authors.func-authors-claimable {
+        .func-author-row:nth-child(8n+1) input { background-color: var(--group-1-color); }
+        .func-author-row:nth-child(8n+2) input { background-color: var(--group-2-color); }
+        .func-author-row:nth-child(8n+3) input { background-color: var(--group-3-color); }
+        .func-author-row:nth-child(8n+4) input { background-color: var(--group-4-color); }
+        .func-author-row:nth-child(8n+5) input { background-color: var(--group-5-color); }
+        .func-author-row:nth-child(8n+6) input { background-color: var(--group-6-color); }
+        .func-author-row:nth-child(8n+7) input { background-color: var(--group-7-color); }
+        .func-author-row:nth-child(8n+8) input { background-color: var(--group-8-color); }
+    }
+
     /* Function admin mode options */
-    label:has(.func-authors) span { width: 2em; }
-    .func-authors { width: calc(100% - 2.5em); }
     .func-readonly {
         label:first-of-type span { width: 5.5em; }
         label:not(:first-of-type) {
@@ -397,7 +447,7 @@ div:where(.swal2-container) img:where(.swal2-image) { margin: 2em auto 0 !import
     }
     .func-var-type { font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;; }
     .func-var-desc { width: 100%; display: inline-block; }
-    .func-vars >div:not(.func-var-button):not(:has(.func-var))::after { content: "None"; display: block; height: 0em; }
+    .func-vars >div:not(.func-button):not(:has(.func-var))::after { content: "None"; display: block; height: 0em; }
     .func-vars {
         position: relative;
         width: calc(100% - 1em);
@@ -430,26 +480,17 @@ div:where(.swal2-container) img:where(.swal2-image) { margin: 2em auto 0 !import
         .func-var-type:has(option[data-custom-type]:checked):not(:disabled) + .func-var-type-edit { display: inline-block; }
 
         /* Add and Remove Buttons */
-        .func-var-button {
-            position: absolute;
-            top: -0.625em;
-            margin: 0; padding: 0;
-            box-sizing: border-box;
+        .func-button {
+            position: absolute; top: -0.625em;
             border: 1px solid var(--stroke-color);
             border-radius: 50%;
             background-color: var(--insp-vars-background-color);
-            cursor: pointer;
-            width: 1.25em; height: 1.25em;
-            font-weight: bold;
-            z-index: 110;
         }
-        .func-var-button svg { width: 0.75em; height: 0.75em; display: block; margin: 0.15em auto; }
-        .func-var-button-remove { color: red; right: 0.75em; }
-        .func-var-button-add { color: green; right: 2.5em; }
-        > .func-var-button-add { top: unset; bottom: 0.75em; right: 3em !important; }
-        /* > .func-var-button-add:last-child { position: static; } */
-        .sortable-drag .func-var-button { display: none; }
-        .func-var-button-disabled { display: none;}
+        .func-button-remove { right: 0.75em; }
+        .func-button-add { right: 2.5em; }
+        > .func-button-add { top: unset; bottom: 0.75em; right: 3em !important; }
+        /* > .func-button-add:last-child { position: static; } */
+        .sortable-drag .func-button { display: none; }
 
         /* Drag Handle */
         .func-var:not(.func-var-readonly) .func-var-drag-handle {
@@ -467,9 +508,9 @@ div:where(.swal2-container) img:where(.swal2-image) { margin: 2em auto 0 !import
     label:first-of-type { margin-top: 1em; }
     label span { font-weight: bold; display: inline-block; width: 5em; }
 }
-.func-planner.dark-mode .inspector .func-vars {
-    .func-var-button-remove { color: #ff8888; right: 0.75em; }
-    .func-var-button-add { color: #66aa66; right: 2.5em; }
+.func-planner.dark-mode .inspector {
+    .func-button-remove { color: #ff8888; }
+    .func-button-add { color: #66aa66; }
 }
 
 .func-planner .inspector .is-main {

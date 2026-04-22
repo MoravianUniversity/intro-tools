@@ -209,13 +209,40 @@ function pythonDocstring(desc, params, returns) {
     docstring += `    """\n`;
     return docstring;
 }
-function generatePythonTemplate(model, withTypes=true) {
+function authorString(authors) {
+    return (authors.length === 0) ? 'TODO' :
+         (authors.length === 1) ? authors[0] :
+         (authors.slice(0, -1).join(', ') + ' and ' + authors.slice(-1)[0])
+}
+// if authors is null, use all authors and don't split it up
+// if authors is provided, only include those authors in the export (array or string)
+// if authors is contains an empty string, include the unspecified author functions as well
+function dealWithAuthors(model, authors) {
+    const modelAuthors = model.modelData.get('authors')?.toJSON() || [];
+
+    const includeAll = authors == null;
+    const includeUnspecified = authors === '' || (Array.isArray(authors) && authors.includes(''));
+    if (includeAll) { authors = modelAuthors; }
+    // ensures that authors is always an array of trimmed non-empty strings, even if the input is a single string or null/undefined
+    authors = (Array.isArray(authors) ? authors : (typeof authors === 'string' ? [authors] : [])).map(name => name.trim()).filter(name => name.length > 0);
+
+    const by = includeUnspecified ? authorString(modelAuthors) : authorString(authors);
+
+    const functions = Array.from(model.functions.entries()).filter(([key, func]) => {
+        const owner = func.get('owner')?.toString() || '';
+        return includeAll || (includeUnspecified && owner === '') || authors.includes(owner);
+    });
+
+    return { by, functions };
+}
+function generatePythonTemplate(model, authors=null, withTypes=true) {
     const data = model.modelData.toJSON();
-    let text = `"""\n${data.documentation || DEFAULT_PROGRAM_HEADER}\n\nBy: ${data.authors || "TODO"}\n"""\n\n`;
+    const { by, functions } = dealWithAuthors(model, authors);
+    let text = `"""\n${data.documentation || DEFAULT_PROGRAM_HEADER}\n\nBy: ${by}\n"""\n\n`;
     if (data.globalCode) { text += `${data.globalCode}\n\n`; }
     let mainFunc = null;
-    // TODO: sort?
-    for (const [key, func] of model.functions.entries()) {
+    // TODO: sort using DFS or similar?
+    for (const [key, func] of functions) {
         // Create the def line
         const name = func.get("name")?.toString() || `function${key}`;
         const params = func.get("params")?.toJSON() || [];
@@ -266,22 +293,17 @@ function generatePythonTemplate(model, withTypes=true) {
  * @param {boolean} withTypes Whether to include type annotations.
  */
 export function exportToPython(model, options, withTypes=true) {
-    const text = generatePythonTemplate(model, withTypes);
-    copyToClipboard(text);
-    Swal.fire({
-        theme: options.theme,
-        imageUrl: pythonIcon,
-        imageWidth: "6em",
-        title: "Python Template Copied",
-        html: "Python template copied to clipboard.<br>Paste it into a Python file.<br>" +
-            "<a href=\"data:text/plain;charset=utf-8," + encodeURIComponent(text) + "\" download=\"" + model.id + ".py\">Click here to download it.</a>",
-        showCloseButton: true,
-    });
+    exportTemplate(
+        model, options, (model, authors = null) => generatePythonTemplate(model, authors, withTypes),
+        "Python Template Copied", pythonIcon,
+        "Python template copied to clipboard.<br>Paste it into a Python file.",
+    )
 }
-function generatePythonTests(model) {
+function generatePythonTests(model, authors=null) {
     const data = model.modelData.toJSON();
-    let text = `"""\n${data.testDocumentation || "Tests for the " + model.id + " module"}\n\nBy: ${data.authors || "TODO"}\n"""\n\nimport pytest\n\nimport ` + model.id + `\n\n`;
-    for (const [key, func] of model.functions.entries()) {
+    const { by, functions } = dealWithAuthors(model, authors);
+    let text = `"""\n${data.testDocumentation || "Tests for the " + model.id + " module"}\n\nBy: ${by}\n"""\n\nimport pytest\n\nimport ` + model.id + `\n\n`;
+    for (const [key, func] of functions) {
         if (func.get("testable")) {
             const name = func.get("name")?.toString() || `function${key}`;
             const testCode = func.get("testCode")?.toString() || "";
@@ -299,19 +321,63 @@ function generatePythonTests(model) {
  * @param {*} model 
  */
 export function exportPythonTests(model, options={}) {
-    const text = generatePythonTests(model);
-    copyToClipboard(text);
-    Swal.fire({
-        theme: options.theme,
-        imageUrl: unitTestsIcon,
-        imageWidth: "6em",
-        title: "Python Unit Tests Copied",
-        html: "Python unit tests copied to clipboard.<br>Paste it into a Python file that ends with <code>_test.py</code>.<br>" +
-            "<a href=\"data:text/plain;charset=utf-8," + encodeURIComponent(text) + "\" download=\"" + model.id + "_test.py\">Click here to download it.</a>",
-        showCloseButton: true,
-    });
-
+    exportTemplate(
+        model, options, generatePythonTests,
+        "Python Unit Tests Copied", unitTestsIcon,
+        "Python unit tests copied to clipboard.<br>Paste it into a Python file that ends with <code>_test.py</code>.",
+        "_test",
+    )
 }
+
+function dataURL(text, mime='text/plain;charset=utf-8') {
+    return `data:${mime},${encodeURIComponent(text)}`;
+}
+
+function exportTemplate(
+    model, options, generateFunc,
+    title, icon, desc, filenameSuffix="",
+) {
+    const text = generateFunc(model, null);
+    copyToClipboard(text);
+    const link = `<a class="download-link" href="${dataURL(text)}" download="${model.id}${filenameSuffix}.py">Click here to download it.</a>`;
+    const descWithLink = `${desc}<br>${link}`;
+
+    if (options.canClaimFuncs) {
+        const authors = model.modelData.get('authors')?.toJSON() || [];
+        Swal.fire({
+            theme: options.theme,
+            imageUrl: icon,
+            imageWidth: "6em",
+            title: title,
+            html: `Change author: <select>
+            <option value="">All Combined in one file</option><option value="">Shared/Not Specified</option>
+            ${authors.map(author => `<option value="${author}">${author}</option>`).join("")}
+            </select><br><br>${descWithLink}`,
+            showCloseButton: true,
+            willOpen: (popup) => {
+                const select = popup.querySelector("select");
+                const downloadLink = popup.querySelector("a.download-link");
+                select.addEventListener("change", () => {
+                    const selected = select.value;
+                    const text = generateFunc(model, select.selectedIndex === 0 ? null : selected);
+                    copyToClipboard(text);
+                    downloadLink.href = dataURL(text);
+                    downloadLink.download = `${model.id}${selected ? `_${selected}` : ""}.py`;
+                });
+            }
+        });
+    } else {
+        Swal.fire({
+            theme: options.theme,
+            imageUrl: icon,
+            imageWidth: "6em",
+            title: title,
+            html: descWithLink,
+            showCloseButton: true,
+        });
+    }
+}
+
 
 function confirmDialog(title, text, confirmFunc, theme='auto') {
     Swal.fire({
@@ -370,7 +436,7 @@ export function saveJSON(model, options={}) {
         imageWidth: "6em",
         title: "JSON Copied",
         html: "JSON version copied to clipboard.<br>Save to a file so it can be reloaded later.<br>" +
-            "<a href=\"data:application/json;charset=utf-8," + encodeURIComponent(json) + "\" download=\"" + model.id + "-plan.json\">Click here to download it.</a>",
+            `<a href="${dataURL(json, 'application/json')}" download="${model.id}-plan.json">Click here to download it.</a>`,
         showCloseButton: true,
     });
 }

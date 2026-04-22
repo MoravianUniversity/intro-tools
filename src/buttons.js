@@ -259,12 +259,13 @@ function makeInfoBox(parentDiv, model, options) {
         if (!hasMain) { model.recordModelDataProblem("error", "main", "There must be a main() function."); }
         if (!options.callGraphOnly) {
             // update the actual model data problems elsewhere, this is just for the info box display
-            const doc = (model.modelData.get('documentation')?.toString() || '').trim();
+            const doc = model.modelData.get('documentation')?.toString()?.trim() || '';
             moduleDocMissing.classList.toggle('value-hidden', doc.length > 0);
             moduleDocTooShort.classList.toggle('value-hidden', doc.length == 0 || (doc.length >= (options.minModuleDescLength ?? 25)));
-            const authors = (model.modelData.get('authors')?.toString() || '').trim();
-            authorNamesMissing.classList.toggle('value-hidden', authors.length > 0);
-            authorNamesTooShort.classList.toggle('value-hidden', authors.length == 0 || (authors.length >= 3));
+            const authors = model.modelData.get('authors')?.toJSON() || [];
+            const lengths = authors.map(name => name.trim().length);
+            authorNamesMissing.classList.toggle('value-hidden', authors.length > 0 && lengths.some(len => len > 0));
+            authorNamesTooShort.classList.toggle('value-hidden', authors.length == 0 || lengths.every(len => len >= 3));
         }
 
         countRow.cells[1].textContent = functions.length;
@@ -277,7 +278,6 @@ function makeInfoBox(parentDiv, model, options) {
         testableRow.classList.toggle('value-error', nTestable < minTestable);
         model.clearModelDataProblem(null, "testable");
         if (nTestable < minTestable) { model.recordModelDataProblem("error", "testable", `There must be at least ${minTestable} testable functions.`); }
-
     }
     model.addModelDataListener('documentation', update);
     model.addModelDataListener('authors', update);

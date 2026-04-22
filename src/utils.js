@@ -1,5 +1,8 @@
 /** Utility functions. */
 
+import addIcon from '../images/add.svg';
+import removeIcon from '../images/remove.svg';
+
 /**
  * Deep equality check for two values, recursively checking objects and arrays.
  * @param {*} a
@@ -81,4 +84,26 @@ export function htmlToNode(html) {
 export function isMacOS() {
     const platform = window.navigator?.userAgentData?.platform || window.navigator.platform;
     return platform.toLowerCase().indexOf('mac') !== -1;
+}
+
+/**
+ * Create a button element for adding items, with appropriate styling and SVG icon.
+ * @returns {HTMLElement} The created add button element.
+ */
+export function makeAddButton(onclick = null) { return makeButton("add", onclick); }
+
+/**
+ * Create a button element for removing items, with appropriate styling and SVG icon.
+ * @returns {HTMLElement} The created remove button element.
+ */
+export function makeRemoveButton(onclick = null) { return makeButton("remove", onclick); }
+
+function makeButton(name, onclick = null) {
+    const button = document.createElement("div");
+    button.className = `func-button func-button-${name}`;
+    loadSVG(name === "remove" ? removeIcon : addIcon, button, name === "remove" ? "x" : "+");
+    if (onclick) {
+        button.addEventListener("click", onclick);
+    }
+    return button;
 }

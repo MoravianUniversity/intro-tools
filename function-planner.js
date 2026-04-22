@@ -40,6 +40,7 @@ const DEFAULT_ALLOWED_TYPES = ['int', 'float', 'str', 'bool', 'list', 'tuple', '
  * @param {number} options.minFuncDescLength - Minimum length of function description (for validation), defaults to 20
  * @param {number} options.minParamDescLength - Minimum length of parameter description (for validation), defaults to 12
  * @param {number} options.minReturnDescLength - Minimum length of return description (for validation), defaults to 12
+ * @param {boolean} options.canClaimFuncs - If true, functions can be "claimed" by one author, colorizing/exporting them separately
  * @param {boolean} options.adminMode - If true, enables admin mode features (nothing is read-only or not shown, allows editing read-only properties)
  * @param {boolean} options.callGraphOnly - If true, hides the module and function inspectors, only shows the call graph (and suppresses most problem checking)
  */
@@ -57,6 +58,7 @@ export default function init(
     options.allowedTypes = options.allowedTypes ?? DEFAULT_ALLOWED_TYPES;
     options.adminMode = options.adminMode ?? false;
     options.callGraphOnly = options.callGraphOnly ?? false;
+    options.canClaimFuncs = options.canClaimFuncs ?? false;
     options.theme = localStorage.getItem('func-planner-theme') === 'dark' ? 'dark' : 'light';
 
     const model = new Model(planId, options.initialModel);

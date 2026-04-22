@@ -113,11 +113,12 @@ function checkModuleDocumentation(model, options={}) {
 }
 
 function checkModuleAuthors(model, options={}) {
-    const authorsLength = (model.modelData.get('authors')?.toString() || '').trim().length;
+    const authors = model.modelData.get('authors')?.toJSON() || [];
+    const lengths = authors.map(name => name.trim().length);
     model.clearModelDataProblem(null, "authors");
-    if (authorsLength === 0) {
+    if (authors.length === 0 || lengths.every(len => len === 0)) {
         model.recordModelDataProblem("error", "authors", "Author name(s) are required.");
-    } else if (authorsLength < 3) {
+    } else if (lengths.some(len => len < 3)) {
         model.recordModelDataProblem("warning", "authors", "Author name(s) seem too short.");
     }
 }
@@ -428,6 +429,10 @@ function funcProblems(model, key, options={}, fix=false) {
 
     if (testable && params.length === 0) { problems.push(["warning", "testable,params", "Testable functions should have at least one parameter."]); }
     if (testable && returns.length === 0) { problems.push(["warning", "testable,returns", "Testable functions should have at least one return value."]); }
+    if (options.canClaimFuncs && func.owner) {
+        const authors = model.modelData.get('authors')?.toJSON() || [];
+        if (!authors.includes(func.owner)) { problems.push(["error", "owner", "Function owner must be one of the module authors."]); }
+    }
     problems.push(...funcIOProblems(model, key, func));
     return problems;
 }

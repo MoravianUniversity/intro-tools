@@ -5,6 +5,7 @@
 
 import { wrapWithLabel, makeCheckbox, makeTextarea, makeReadOnlySelect, makeCodeEditorWithShowCheckbox, makeProblemsDiv, isReadOnly } from './inspector.js';
 import { DEFAULT_PROGRAM_HEADER } from './save-load.js';
+import { makeAddButton, makeRemoveButton } from './utils.js';
 
 /**
  * Creates the module inspector div.
@@ -30,7 +31,7 @@ export function makeModuleInspector(model, options) {
     div.append(
         ...makeHeader(model),
         makeModuleDesc(funcs),
-        makeAuthorNames(funcs),
+        makeAuthorNames(model, options, funcs),
         makeTestDocumentation(model, options, funcs)
     );
     if (options.adminMode) {
@@ -52,7 +53,7 @@ function makeHeader(model) {
     const title = document.createElement('h2');
     title.textContent = (model.id || 'Module');
     const info = document.createElement('p');
-    info.textContent = 'Select a function to edit it.\nEdit program-wide settings here.';
+    info.innerHTML = 'Select a function to edit it.<br>Edit program-wide settings here.';
     return [title, info];
 }
 
@@ -61,19 +62,96 @@ function makeModuleDesc(funcs) {
         {placeholder: DEFAULT_PROGRAM_HEADER, required: true});
 }
 
-function makeAuthorNames(funcs) {
-    const input = document.createElement('input');
-    input.type = 'text';
-    input.className = 'func-authors';
-    input.placeholder = 'Authors...';
-    input.required = true;
-    input.addEventListener('input', (e) => { funcs.set('authors', e.target.value, e.target.selectionStart); });
+function makeAuthorNames(model, options, funcs) {
+    const container = document.createElement('div');
+    container.className = 'func-authors';
+    if (options.canClaimFuncs) {
+        container.classList.add('func-authors-claimable');
+    }
+
+    const list = document.createElement('div');
+    list.className = 'func-authors-list';
+
+    let readOnly = false;
+
+    function currentValues() {
+        return [...list.getElementsByTagName('input')].map((input) => input.value.trim());
+    }
+
+    function set(input, newName) {
+        const index = [...list.getElementsByTagName('input')].indexOf(input);
+        const oldName = model.modelData.get('authors')?.get(index)?.toString() || '';
+        funcs.set(`authors[${index}]`, newName, input.selectionStart);
+        model.functions.forEach((func) => {
+            if (func.get('owner')?.toString() === oldName) {
+                if (!newName) {
+                    func.delete('owner');
+                } else {
+                    func.set('owner', newName);
+                }
+            }
+        });
+    }
+
+    function makeAuthorRow(name) {
+        const row = document.createElement('div');
+        row.className = 'func-author-row';
+
+        const input = document.createElement('input');
+        input.type = 'text';
+        input.placeholder = 'Author name...';
+        input.value = name;
+        input.readOnly = readOnly;
+        input.addEventListener('input', () => {
+            if (input.value.startsWith(' ')) {
+                input.value = input.value.trimStart();
+            }
+            if (input.value.length > 0 && input.value[0] === input.value[0].toLowerCase()) {
+                input.value = input.value[0].toUpperCase() + input.value.slice(1);
+            }
+            set(input, input.value);
+        });
+
+        row.append(input, makeRemoveButton(() => {
+            set(input, null);
+            if (list.childElementCount === 1) {
+                input.value = '';
+            } else {
+                row.remove();
+            }
+        }));
+
+        return row;
+    }
+
+    container.append(list, makeAddButton(() => {
+        const empty = currentValues().indexOf('');
+        if (empty !== -1) {
+            // TODO: fix all the weird focus issues with adding/removing/updating authors
+            // list.children[empty].querySelector('input').focus();
+        } else {
+            list.appendChild(makeAuthorRow(''));
+            // list.lastElementChild.querySelector('input').focus();
+        }
+    }));
+
     funcs.listen('authors', (value) => {
-        value = value ?? '';
-        if (input.value !== value) { input.value = value; }
+        const names = (value && value.length > 0) ? value.map((v) => v.trim()) : [''];
+        const current = currentValues();
+        if (current.length !== names.length || current.some((name, index) => name !== names[index])) {
+            // const selected = list.querySelector('input:focus')?.value || '';
+            list.replaceChildren(...names.map(name => makeAuthorRow(name)));
+            // const toFocus = list.querySelector(`input[value="${selected}"]`) || list.querySelector('input');
+            // if (toFocus) { toFocus.focus(); }
+        }
     });
-    funcs.listenRO('authors', (value) => { input.readOnly = value; });
-    return wrapWithLabel(input, 'By:');
+    funcs.listenRO('authors', (value) => {
+        readOnly = value;
+        container.classList.toggle('func-authors-read-only', readOnly);
+        for (const input of list.getElementsByTagName('input')) { input.readOnly = readOnly; }
+    });
+
+    return wrapWithLabel(container, 'By:');
 }
 
 function makeTestDocumentation(model, options, funcs) {

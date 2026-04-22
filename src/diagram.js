@@ -127,7 +127,7 @@ export function setupDiagram(
         // curve: go.Link.Bezier,
         // smoothness: 0.1,
         corner: 10,
-        layerName: 'Background',
+        // TODO: layerName: 'Background',
         doubleClick: (e, link) => {
             // Reverse the link direction on double-click
             const from = link.fromNode;
@@ -170,6 +170,35 @@ export function setupDiagram(
         (part instanceof go.Link) && (isCallsOutOfRO(part.fromNode.data.readOnly) || isCallsIntoRO(part.toNode.data.readOnly)) ||
         ((part instanceof go.Node) && part.data.readOnly)
     ));
+
+    // Group template
+    diagram.groupTemplate = new go.Group("Horizontal", {
+        selectable: false,
+        isShadowed: true,
+        shadowOffset: new go.Point(0, 2),
+        layerName: 'Background',
+        layout: new go.LayeredDigraphLayout({ direction: 90, layerSpacing: 50, columnSpacing: 30 }),
+    }).add(
+        new go.TextBlock({
+            alignment: go.Spot.TopLeft,
+            angle: 270,
+            width: 75,
+            wrap: go.Wrap.Fit,
+            textAlign: "right",
+            shadowVisible: false,
+        }).bind("text", "key").theme('font', 'groupText').theme('stroke', 'text'),
+        new go.Panel("Auto", { alignment: go.Spot.TopLeft }).add(
+            new go.Shape("RoundedRectangle", { parameter1: 6 }) // surrounds the Placeholder
+                .theme('stroke')
+                .theme('fill', 'bg-none')
+                .themeData('fill', 'key', null, (name) => {
+                    const index = (model.modelData.get('authors')?.toJSON() || []).indexOf(name);
+                    return index === -1 ? 'bg-none' : `group-${index % diagram.themeManager.maxGroup + 1}`;
+                }),
+            new go.Placeholder({ padding: 4 }), // container for member nodes
+        ),
+    )
+    .theme('shadowColor', 'shadow');
 
     // Add all of the extra UI elements
     if (options.title) {
@@ -223,9 +252,32 @@ export function setupDiagram(
     });
 
     // Copy changes from Y.js model to the GoJS model
+    function maybeRemoveGroup(node) {
+        const group = node.containingGroup;
+        if (group && group.memberParts.count === 1) {
+            diagram.model.removeNodeData(group.data);
+        }
+    }
+    function setGroup(node, group) {
+        if (group) {
+            // ensure the owner group exists and add this node to it
+            if (!diagram.findNodeForKey(group)) {
+                diagram.model.addNodeData({ key: group, isGroup: true });
+            }
+            diagram.model.setGroupKeyForNodeData(node.data, group);
+        } else {
+            diagram.model.setGroupKeyForNodeData(node.data, undefined);
+        }
+    }
+    model.addModelDataListener('authors', (_, newValue) => {
+        diagram.findTopLevelGroups().each(group => group.updateTargetBindings('key'));
+    });
     model.addFuncAddListener((key, data) => {
         if (!('name' in data) || isBlankFunctionName(data.name)) { data.name = 'function'; }
-        diagram.model.addNodeData({ ...data, key: key });
+        diagram.model.addNodeData({ key: key, ...data });
+        if (options.canClaimFuncs && data.owner) {
+            setGroup(diagram.findNodeForKey(key), data.owner);
+        }
         if (model.synced) {
             // TODO: if the origin of the change is another user, don't select the new node
             diagram.select(diagram.findNodeForKey(key));
@@ -235,6 +287,7 @@ export function setupDiagram(
         const node = diagram.findNodeForKey(key);
         if (node) {
             if (diagram.selection.contains(node)) { diagram.clearSelection(); }
+            maybeRemoveGroup(node);
             diagram.model.removeNodeData(node.data);
         }
         updateInterNodeProblems(model, options);
@@ -247,6 +300,10 @@ export function setupDiagram(
                 newValue = newValue?.toString()?.trim();
                 // name has issues if set to empty string
                 if (newValue === '') { newValue = 'function'; }
+            } else if (property === 'owner' && options.canClaimFuncs) {
+                newValue = newValue?.toString()?.trim();
+                maybeRemoveGroup(node);
+                setGroup(node, newValue);
             }
             diagram.model.setDataProperty(node.data, property, newValue);
         }
@@ -290,7 +347,18 @@ export function updateDiagramTheme(diagram) {
     function getFont(name, defaultValue) {
         return style.getPropertyValue(`--${name}-font`).trim() || defaultValue;
     }
-    diagram.themeManager.set('system', {
+
+    // dynamically determine how many group colors are defined in CSS, and add them to the theme
+    let maxGroup = 0;
+    const groupColors = {};
+    const defaultGroupColors = ['#f8717140', '#f9731640', '#fbbf2440', '#34d39940', '#60a5fa40', '#a78bfa'];
+    while (maxGroup < defaultGroupColors.length || style.getPropertyValue(`--group-${maxGroup+1}-color`).trim()) {
+        maxGroup++;
+        groupColors[`group-${maxGroup}`] = style.getPropertyValue(`--group-${maxGroup}-color`).trim() || defaultGroupColors[maxGroup-1];
+    }
+    diagram.themeManager.maxGroup = maxGroup;
+
+    diagram.themeManager.set(diagram.themeManager.defaultTheme, {
         // The defaults are from the light theme, but users can override them with CSS variables
         colors: {
             text: getColor('text', '#111827'),
@@ -313,12 +381,16 @@ export function updateDiagramTheme(diagram) {
             'bg-indirect': getColor('bg-indirect', '#d1d5db'),
             'bg-none': getColor('bg-none', '#d1d5db'),
             'bg-undefined': '#ff0000', // for debugging
+
+            // group colors for function authorship
+            ...groupColors,
         },
         fonts: {
             text: getFont('diagram-text', "14px 'Monaco', 'Menlo', 'Ubuntu Mono', monospace"),
             normal: getFont('diagram-text', "14px 'Monaco', 'Menlo', 'Ubuntu Mono', monospace"),
             bold: getFont('diagram-bold', "bold 14px 'Monaco', 'Menlo', 'Ubuntu Mono', monospace"),
             title: getFont('diagram-title', '2.5rem InterVariable, sans-serif'),
+            groupText: getFont('diagram-group-text', "12px Sans-Serif"),
         },
         numbers: {
             selection: 2,

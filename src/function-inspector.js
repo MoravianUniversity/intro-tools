@@ -6,10 +6,7 @@ import Sortable from 'sortablejs';
 import Swal from 'sweetalert2';
 
 import { wrapWithLabel, makeCheckbox, makeTextarea, makeCodeEditorWithShowCheckbox, makeReadOnlySelect, makeProblemsDiv, isReadOnly } from './inspector.js';
-import { loadSVG, makeOption } from './utils.js';
-
-import addIcon from '../images/add.svg';
-import removeIcon from '../images/remove.svg';
+import { loadSVG, makeOption, makeAddButton, makeRemoveButton } from './utils.js';
 
 import TypeEditor from './type-editor.js';
 
@@ -58,6 +55,7 @@ export function makeFunctionInspector(model, options) {
         makeReturns(model, options, funcs),
         makeIOSelect(funcs),
         makeTestableCheckbox(funcs),
+        makeOwnerSelect(model, options, funcs),
         makeProblemsDiv((listener) => {
             model.addFuncListener('problems', (actualKey, _, problems) => {
                 if (actualKey === key) {
@@ -77,7 +75,7 @@ export function makeFunctionInspector(model, options) {
     );
     if (options.adminMode) {
         div.appendChild(makeReadOnlySelect(funcs,
-            ['name', 'params', 'returns', 'desc', 'io', 'testable', 'code', 'testCode', 'calls', 'callsInto', 'callsOutOf']));
+            ['name', 'params', 'returns', 'desc', 'io', 'testable', 'owner', 'code', 'testCode', 'calls', 'callsInto', 'callsOutOf']));
     }
 
     return [div, setKey];
@@ -141,7 +139,32 @@ function makeIOSelect(funcs) {
 function makeTestableCheckbox(funcs) {
     return wrapWithLabel(makeCheckbox('testable', funcs), 'Testable: ');
 }
+function makeOwnerSelect(model, options, funcs) {
+    if (!options.canClaimFuncs) { return document.createElement('span'); }
 
+    const select = document.createElement('select');
+    select.className = 'func-owner';
+    select.appendChild(makeOption('', 'Shared/Not Applicable'))
+
+    select.addEventListener('change', (e) => { funcs.set('owner', e.target.value); });
+    funcs.listen('owner', (value) => {
+        const authors = model.modelData.get('authors')?.toArray() || [];
+        if ([...select.options].slice(1).map((o) => o.value) !== [...authors]) {
+            select.options.length = 1;
+            for (const author of authors) {
+                select.options.add(makeOption(author));
+            }
+        }
+        select.value = value?.toString() || '';
+    });
+    funcs.listenRO('owner', (value) => { select.disabled = value; });
+
+    const label = wrapWithLabel(select, 'Owner: ');
+    const info = document.createElement('p');
+    info.textContent = 'See "By" in module settings to update this list.';
+    label.append(info);
+    return label;
+}
 
 ////////// Parameters and Returns //////////
 function makeParams(model, options, funcs) { return createVarsBox(model, options, "Parameter", "params", true, funcs); }
@@ -189,10 +212,10 @@ function createVarsBox(model, options, name, property, hasName, funcs) {
             const result = await showTypeBuilder(options, edit.parentElement.querySelector(".func-var-type").value);
             if (result !== null) { setProp(getIndex(e), "type", result); }
         } else {
-            const target = e.target.closest(".func-var-button");
+            const target = e.target.closest(".func-button");
             if (!target) { return; }
-            if (target.classList.contains("func-var-button-add")) { funcs.add(property, target === initAdd ? -1 : getIndex(e)); }
-            else if (target.classList.contains("func-var-button-remove")) { funcs.remove(property, getIndex(e)); }
+            if (target.classList.contains("func-button-add")) { funcs.add(property, target === initAdd ? -1 : getIndex(e)); }
+            else if (target.classList.contains("func-button-remove")) { funcs.remove(property, getIndex(e)); }
         }
     });
 
@@ -220,8 +243,8 @@ function createVarsBox(model, options, name, property, hasName, funcs) {
         const name = hasName ? box.querySelector(".func-var-name") : null;
         const type = box.querySelector(".func-var-type");
         const desc = box.querySelector(".func-var-desc");
-        const add = box.querySelector(".func-var-button-add");
-        const remove = box.querySelector(".func-var-button-remove");
+        const add = box.querySelector(".func-button-add");
+        const remove = box.querySelector(".func-button-remove");
         const drag = box.querySelector(".func-var-drag-handle");
 
         const nameValue = name?.value?.trim();
@@ -232,8 +255,8 @@ function createVarsBox(model, options, name, property, hasName, funcs) {
 
         const itemRO = itemIsRO(ro, i, nameValue);
         box.classList.toggle("func-var-readonly", itemRO);
-        add.classList.toggle("func-var-button-disabled", itemRO);
-        remove.classList.toggle("func-var-button-disabled", itemRO);
+        add.classList.toggle("func-button-disabled", itemRO);
+        remove.classList.toggle("func-button-disabled", itemRO);
         drag.classList.toggle("func-var-drag-disabled", itemRO);
     }
 
@@ -276,7 +299,7 @@ function createVarsBox(model, options, name, property, hasName, funcs) {
             const ro = value ?? false;
             const masterRO = isReadOnly(ro, property);
             div.classList.toggle("func-vars-readonly", masterRO);
-            initAdd.classList.toggle("func-var-button-disabled", masterRO);
+            initAdd.classList.toggle("func-button-disabled", masterRO);
             for (let i = 0; i < list.children.length; i++) {
                 updateItemRO(list.children[i], i, ro);
             }
@@ -444,11 +467,3 @@ function makeDescElement() {
     desc.required = true;
     return desc;
 }
-function makeVarButton(name) {
-    const button = document.createElement("div");
-    button.className = "func-var-button func-var-button-" + name;
-    loadSVG(name === "remove" ? removeIcon : addIcon, button, name === "remove" ? "x" : "+");
-    return button;
-}
-function makeAddButton() { return makeVarButton("add"); }
-function makeRemoveButton() { return makeVarButton("remove"); }
