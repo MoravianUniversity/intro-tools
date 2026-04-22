@@ -227,9 +227,8 @@ export class Model {
             updateText(this.modelData, property, value, cursorPos);
         } else if (MODEL_DATA_ARRAYS.includes(property)) {
             // replace entire array
-            // TODO: clears array?
             if (typeof value === 'string' || value instanceof Y.Text) { value = [value]; }
-            this.modelData.set(property, new Y.Array(value.map(v => typeof v === 'string' ? new Y.Text(v) : v)));
+            this.modelData.set(property, Y.Array.from(value.map(v => typeof v === 'string' ? new Y.Text(v) : v)));
         } else if (MODEL_DATA_ARRAYS.some(arr => property.startsWith(arr))) {
             // update specific index in array
             const result = /^(\w+)\[(\d+)\]$/.exec(property);
@@ -502,7 +501,7 @@ export class Model {
             const [type, index, subprop] = this.parseFuncProperty(property);
             if (index == null) {
                 // update all elements
-                func.set(type, new Y.Array(value.map(this.convertFuncData)));
+                func.set(type, Y.Array.from(value.map(this.convertFuncData)));
             } else {
                 this.model.transact(() => {
                     const needNewArray = !func.has(type);
