@@ -95,10 +95,13 @@ function makeWidgetButtons(parentDiv, diagram, model, options={}) {
     // export/import buttons
     addButton(buttons, pythonIcon, '', 'Create Python Template', () => { exportToPython(model, options); });
     const testButton = addButton(buttons, unitTestsIcon, '', 'Generate Python Unit Tests', () => { exportPythonTests(model, options); });
-    model.addFuncListener('testable', () => {
+    function updateTestButton() {
         testButton.disabled = Array.from(model.functions.values()).every(n => !n.get('testable'));
-    });
-    testButton.disabled = Array.from(model.functions.values()).every(n => !n.get('testable'));
+    }
+    model.addFuncAddListener(updateTestButton);
+    model.addFuncRemoveListener(updateTestButton);
+    model.addFuncListener('testable', updateTestButton);
+    updateTestButton();
     // TODO: only have these available if not connected to a shared Yjs model
     addButton(buttons, saveIcon, 'no-outline', 'Save as JSON', () => { saveJSON(model, options); });
     addButton(buttons, loadIcon, 'no-outline', 'Load from JSON', () => { loadJSON(model, options); });
