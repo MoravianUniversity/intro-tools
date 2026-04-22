@@ -13,7 +13,6 @@
  *  - importJSON(model, options)
  */
 
-import { GraphLinksModel } from 'gojs';
 import Swal from 'sweetalert2';
 
 import pythonIcon from '../images/python.svg';
