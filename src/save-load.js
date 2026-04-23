@@ -234,16 +234,38 @@ function dealWithAuthors(model, authors) {
 
     return { by, functions };
 }
+// Performs a topological sort of the functions based on calls to ensure that called functions are
+// defined before they are called. If there is a cycle, somewhat ignore it.
+function sortFunctions(model, functions) {
+    const sortedKeys = [];
+    const visited = new Set();
+
+    function visit(key) {
+        if (visited.has(key)) { return; }
+        visited.add(key);
+        for (const calledKey of (model.calledFunctions[key] || [])) { visit(calledKey); }
+        sortedKeys.push(key);
+    }
+
+    for (const [key] of functions) {
+        if (!model.callingFunctions[key]) { visit(key); }
+    }
+
+    const funcMap = Object.fromEntries(functions);
+    return sortedKeys.map(key => [key, funcMap[key]]);
+}
 function generatePythonTemplate(model, authors=null, withTypes=true) {
     const data = model.modelData.toJSON();
     const { by, functions } = dealWithAuthors(model, authors);
     let text = `"""\n${data.documentation || DEFAULT_PROGRAM_HEADER}\n\nBy: ${by}\n"""\n\n`;
     if (data.globalCode) { text += `${data.globalCode}\n\n`; }
-    let mainFunc = null;
-    // TODO: sort using DFS or similar?
-    for (const [key, func] of functions) {
+    const funcs = sortFunctions(model, functions);
+    let hasMainFunc = false;
+
+    for (const [key, func] of funcs) {
         // Create the def line
         const name = func.get("name")?.toString() || `function${key}`;
+        if (name === 'main') { hasMainFunc = true; }
         const params = func.get("params")?.toJSON() || [];
         const returns = func.get("returns")?.toJSON() || [];
         let funcText = pythonDefLine(name, params, returns, withTypes) + "\n";
@@ -276,12 +298,9 @@ function generatePythonTemplate(model, authors=null, withTypes=true) {
             }
         }
 
-        if (name === 'main') { mainFunc = funcText; }
-        else { text += funcText + "\n\n\n"; }
+        text += funcText + "\n\n\n";
     }
-    if (mainFunc) {
-        text += mainFunc + '\n\n\nif __name__ == "__main__":\n    main()\n';
-    }
+    if (hasMainFunc) { text += 'if __name__ == "__main__":\n    main()\n'; }
     text = text.replace(/[ \t\f\v]+$/gm, '');  // remove all trailing whitespace
     return text;
 }
