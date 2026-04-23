@@ -389,10 +389,8 @@ div:where(.swal2-container) img:where(.swal2-image) { margin: 2em auto 0 !import
     .func-button-disabled { display: none; }
 
     /* Module-level options */
-    label:has(.func-authors) {
-        display: flex; align-items: top; gap: 0.25em;
-        span { width: 2em; }
-    }
+    div:has(> .func-authors) { display: block; display: flex; align-items: top; gap: 0.25em; margin-top: 1em; }
+    #func-authors-label { font-weight: bold; display: inline-block; width: 2em; margin: 0; }
     .func-authors {
         width: calc(100% - 2.5em);
         display: flex; flex-direction: column; gap: 0.25em;
@@ -403,8 +401,8 @@ div:where(.swal2-container) img:where(.swal2-image) { margin: 2em auto 0 !import
                 input { flex: 1 1 auto; min-width: 0; }
             }
         }
-        .func-authors-read-only .func-button { display: none; }
     }
+    .func-authors-read-only .func-button { display: none; }
     .func-authors.func-authors-claimable {
         .func-author-row:nth-child(8n+1) input { background-color: var(--group-1-color); }
         .func-author-row:nth-child(8n+2) input { background-color: var(--group-2-color); }

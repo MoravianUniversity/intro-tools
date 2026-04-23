@@ -72,6 +72,10 @@ function makeAuthorNames(model, options, funcs) {
     const list = document.createElement('div');
     list.className = 'func-authors-list';
 
+    const label = document.createElement('label');
+    label.textContent = 'By:';
+    label.id = 'func-authors-label';
+
     let readOnly = false;
 
     function currentValues() {
@@ -102,6 +106,7 @@ function makeAuthorNames(model, options, funcs) {
         input.placeholder = 'Author name...';
         input.value = name;
         input.readOnly = readOnly;
+        input.ariaLabelledByElements = [label];
         input.addEventListener('input', () => {
             if (input.value.startsWith(' ')) {
                 input.value = input.value.trimStart();
@@ -127,11 +132,10 @@ function makeAuthorNames(model, options, funcs) {
     container.append(list, makeAddButton(() => {
         const empty = currentValues().indexOf('');
         if (empty !== -1) {
-            // TODO: fix all the weird focus issues with adding/removing/updating authors
-            // list.children[empty].querySelector('input').focus();
+            list.children[empty].querySelector('input').focus();
         } else {
             list.appendChild(makeAuthorRow(''));
-            // list.lastElementChild.querySelector('input').focus();
+            list.lastElementChild.querySelector('input').focus();
         }
     }));
 
@@ -139,10 +143,9 @@ function makeAuthorNames(model, options, funcs) {
         const names = (value && value.length > 0) ? value.map((v) => v.trim()) : [''];
         const current = currentValues();
         if (current.length !== names.length || current.some((name, index) => name !== names[index])) {
-            // const selected = list.querySelector('input:focus')?.value || '';
+            const selected = list.querySelector('input:focus')?.value;
             list.replaceChildren(...names.map(name => makeAuthorRow(name)));
-            // const toFocus = list.querySelector(`input[value="${selected}"]`) || list.querySelector('input');
-            // if (toFocus) { toFocus.focus(); }
+            if (selected != null) { list.querySelector(`input[value="${selected}"]`)?.focus(); }
         }
     });
     funcs.listenRO('authors', (value) => {
@@ -151,7 +154,11 @@ function makeAuthorNames(model, options, funcs) {
         for (const input of list.getElementsByTagName('input')) { input.readOnly = readOnly; }
     });
 
-    return wrapWithLabel(container, 'By:');
+    // Cannot use wrapWithLabel here because there are multiple inputs
+    const outer = document.createElement('div');
+    outer.append(label, container);
+    return outer;
+
 }
 
 function makeTestDocumentation(model, options, funcs) {
