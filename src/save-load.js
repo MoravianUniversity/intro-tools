@@ -44,7 +44,7 @@ function downloadDataAsFile(filename, text, mime='text/plain') {
     document.body.removeChild(link);
 }
 
-function wrapText(text, {width=80, indent=4, firstLineIndent=indent}) {
+function wrapText(text, {width=80, indent=4, firstLineIndent=indent}={}) {
     firstLineIndent = " ".repeat(firstLineIndent);
     indent = " ".repeat(indent);
     return text.split("\n").map((para, i) => {
@@ -298,14 +298,14 @@ function sortFunctions(model, functions) {
     }
 
     const funcMap = Object.fromEntries(functions);
-    return sortedKeys.map(key => [key, funcMap[key]]);
+    return sortedKeys.map(key => [key, funcMap[key]]).filter(([key, func]) => func);
 }
 function generatePythonTemplate(model, options, authors=null, withTypes=true) {
     const data = model.modelData.toJSON();
     const { by, functions } = dealWithAuthors(model, authors);
     let text = `"""\n${data.documentation || DEFAULT_PROGRAM_HEADER}\n\nBy: ${by}\n"""\n\n`;
     if (data.globalCode) { text += `${data.globalCode}\n\n`; }
-    const funcs = sortFunctions(model, functions);
+    const funcs = authors == null ? sortFunctions(model, functions) : functions; // TODO: if authors is specified, we should still sort the functions, but only based on the calls between the included functions (ignore calls to excluded functions) - currently we just don't sort at all if authors is specified, which can lead to called functions being defined after their calls
     let hasMainFunc = false;
 
     for (const [key, func] of funcs) {
