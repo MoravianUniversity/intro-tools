@@ -42,14 +42,11 @@ div:where(.swal2-container) img:where(.swal2-image) { margin: 2em auto 0 !import
     --insp-var-ghost-color: #eceef1;       /* gray-150 */
     --insp-var-input-border-color: #555;
 
-    --group-1-color: #e41a1c40;
-    --group-2-color: #377eb840;
-    --group-3-color: #4daf4a40;
-    --group-4-color: #984ea340;
-    --group-5-color: #ff7f0040;
-    --group-6-color: #ffff3340;
-    --group-7-color: #a6562840;
-    --group-8-color: #f781bf40;
+    --group-1-color: #377eb840;
+    --group-2-color: #4daf4a40;
+    --group-3-color: #984ea340;
+    --group-4-color: #ff7f0040;
+    --group-5-color: #f781bf40;
 
     --diagram-text-font: 14px 'Monaco', 'Menlo', 'Ubuntu Mono', monospace; /* 0.875rem - using a rem unit messes up rendering */
     --diagram-bold-font: bold 14px 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
@@ -404,14 +401,11 @@ div:where(.swal2-container) img:where(.swal2-image) { margin: 2em auto 0 !import
     }
     .func-authors-read-only .func-button { display: none; }
     .func-authors.func-authors-claimable {
-        .func-author-row:nth-child(8n+1) input { background-color: var(--group-1-color); }
-        .func-author-row:nth-child(8n+2) input { background-color: var(--group-2-color); }
-        .func-author-row:nth-child(8n+3) input { background-color: var(--group-3-color); }
-        .func-author-row:nth-child(8n+4) input { background-color: var(--group-4-color); }
-        .func-author-row:nth-child(8n+5) input { background-color: var(--group-5-color); }
-        .func-author-row:nth-child(8n+6) input { background-color: var(--group-6-color); }
-        .func-author-row:nth-child(8n+7) input { background-color: var(--group-7-color); }
-        .func-author-row:nth-child(8n+8) input { background-color: var(--group-8-color); }
+        .func-author-row:nth-child(5n+1) input { background-color: var(--group-1-color); }
+        .func-author-row:nth-child(5n+2) input { background-color: var(--group-2-color); }
+        .func-author-row:nth-child(5n+3) input { background-color: var(--group-3-color); }
+        .func-author-row:nth-child(5n+4) input { background-color: var(--group-4-color); }
+        .func-author-row:nth-child(5n+5) input { background-color: var(--group-5-color); }
     }
 
     /* Function admin mode options */
