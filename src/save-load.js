@@ -44,14 +44,26 @@ function downloadDataAsFile(filename, text, mime='text/plain') {
     document.body.removeChild(link);
 }
 
-function wrapText(text, width=80, indent=4) {
-    width = width - indent;
+function wrapText(text, {width=80, indent=4, firstLineIndent=indent}) {
+    firstLineIndent = " ".repeat(firstLineIndent);
     indent = " ".repeat(indent);
-    text = text.replace(new RegExp(`(?![^\\n]{1,${width}}$)([^\\n]{1,${width}})\\s`, 'g'), indent + '$1\n');
-    let lastBreak = text.lastIndexOf("\n");
-    if (lastBreak === -1) { return `${indent}${text}`; }
-    text = text.slice(0, lastBreak) + "\n" + indent + text.slice(lastBreak + 1);
-    return text;
+    return text.split("\n").map((para, i) => {
+        const lines = [];
+        let curLine = i === 0 ? firstLineIndent : indent;
+        para.trim().split(" ").forEach((word) => {
+            if ((curLine + " " + word).length > width) {
+                lines.push(curLine);
+                curLine = indent + word;
+            } else {
+                curLine += " " + word;
+            }
+        });
+        lines.push(curLine);
+        return lines.join("\n");
+    }).join("\n");
+}
+function wrapText48(text) {
+    return wrapText(text, {indent: 8, firstLineIndent: 4});
 }
 function indentText(text, indent=4) {
     indent = " ".repeat(indent);
@@ -191,20 +203,54 @@ export function pythonDefLine(name, params, returns, withTypes=true, simple=fals
     const def = `${name}(${paramsDef.join(", ")})${returnDef}`;
     return simple ? def : `def ${def}:`;
 }
-function formatListInDocstring(name, list, formatItem) {
-    let output = "";
-    if (list.length === 1) {
-        output = `    ${name}: ${formatItem(list[0], 0)}\n`;
-    } else if (list.length > 1) {
-        output = `    ${name}s:\n`;
-        for (let [i, item] of list.entries()) { output += `        ${formatItem(item, i)}\n`; }
-    }
-    return output;
+class DocstringFormatter {
+    paramHeader = '';
+    returnHeader = '';
+    param(name, desc, type) { return ''; }
+    return(desc, type) { return ''; }
 }
-function pythonDocstring(desc, params, returns) {
+class NumpyDocstringFormatter extends DocstringFormatter {
+    paramHeader = 'Parameters\n----------\n';
+    returnHeader = 'Returns\n-------\n';
+    param(name, desc, type) { return wrapText48(name + (type ? ` : ${type}` : "") + `\n${desc}\n`); }
+    return(desc, type) { return wrapText48((type ? type : "object") + `\n${desc}\n`); }
+}
+class GoogleDocstringFormatter extends DocstringFormatter {
+    paramHeader = 'Args:\n';
+    returnHeader = 'Returns:\n';
+    param(name, desc, type) { return wrapText(`${name}${type ? ` (${type})` : ""}: ${desc}`, {indent: 12, firstLineIndent: 8}); }
+    return(desc, type) { return wrapText(`${type ? type : "object"}: ${desc}`, {indent: 12, firstLineIndent: 8}); }
+}
+class SphinxDocstringFormatter extends DocstringFormatter {
+    param(name, desc, type) { return wrapText48(`:param ${name}: ${desc}`) + "\n" + (type ? wrapText48(`:type ${name}: ${type}`) + "\n" : ""); }
+    return(desc, type) { return wrapText48(`:return: ${desc}`) + "\n" + (type ? wrapText48(`:rtype: ${type}`) + "\n" : ""); }
+}
+class EpydocDocstringFormatter extends DocstringFormatter {
+    param(name, desc, type) { return wrapText48(`@param ${name}: ${desc}`) + "\n" + (type ? wrapText48(`@type ${name}: ${type}`) + "\n" : ""); }
+    return(desc, type) { return wrapText48(`@return: ${desc}`) + "\n" + (type ? wrapText48(`@rtype: ${type}`) + "\n" : ""); }
+}
+const DOCSTYLES = {
+    "numpy": NumpyDocstringFormatter(),
+    "google": GoogleDocstringFormatter(),
+    "sphinx": SphinxDocstringFormatter(),
+    "epydoc": EpydocDocstringFormatter(),
+}
+function pythonDocstring(desc, options, params, returns) {
     let docstring = `    """\n${wrapText(desc)}\n\n`;
-    docstring += formatListInDocstring("Parameter", params, (p, i) => `${p.name || letter(i)} (${p.type}): ${p.desc}`);
-    docstring += formatListInDocstring("Return", returns, (ret, i) => `${ret.type}: ${ret.desc}`);
+    const docStyle = (options.docStyle || "numpy").toLowerCase(); // default is numpy: easy to read and explicitly supports multiple returns
+    if (!DOCSTYLES[docStyle]) { console.warn(`Unknown docstring style: ${docStyle}. Defaulting to numpy style.`); }
+    const formatter = DOCSTYLES[docStyle] || DOCSTYLES["numpy"];
+    if (formatter.paramHeader && params.length > 0) { docstring += `    ${formatter.paramHeader}`; }
+    for (const [i, param] of params.entries()) {
+        docstring += formatter.param(param.name || letter(i), param.desc || "TODO", param.type);
+    }
+    if (formatter.returnHeader && returns.length > 0) {
+        if (params.length > 0) { docstring += "\n"; }
+        docstring += `    ${formatter.returnHeader}`;
+    }
+    for (const [i, ret] of returns.entries()) {
+        docstring += formatter.return(ret.desc || "TODO", ret.type);
+    }
     docstring += `    """\n`;
     return docstring;
 }
@@ -254,7 +300,7 @@ function sortFunctions(model, functions) {
     const funcMap = Object.fromEntries(functions);
     return sortedKeys.map(key => [key, funcMap[key]]);
 }
-function generatePythonTemplate(model, authors=null, withTypes=true) {
+function generatePythonTemplate(model, options, authors=null, withTypes=true) {
     const data = model.modelData.toJSON();
     const { by, functions } = dealWithAuthors(model, authors);
     let text = `"""\n${data.documentation || DEFAULT_PROGRAM_HEADER}\n\nBy: ${by}\n"""\n\n`;
@@ -272,7 +318,7 @@ function generatePythonTemplate(model, authors=null, withTypes=true) {
 
         // Create the docstring
         const desc = func.get("desc")?.toString() || "";
-        if (desc) { funcText += pythonDocstring(desc, params, returns); }
+        if (desc) { funcText += pythonDocstring(desc, options, params, returns); }
 
         const code = func.get("code")?.toString() || "";
         if (code) {
@@ -312,7 +358,7 @@ function generatePythonTemplate(model, authors=null, withTypes=true) {
  */
 export function exportToPython(model, options, withTypes=true) {
     exportTemplate(
-        model, options, (model, authors = null) => generatePythonTemplate(model, authors, withTypes),
+        model, options, (model, authors = null) => generatePythonTemplate(model, options, authors, withTypes),
         "Python Template Copied", pythonIcon,
         "Python template copied to clipboard.<br>Paste it into a Python file.",
     )
