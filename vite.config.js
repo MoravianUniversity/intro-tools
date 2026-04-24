@@ -20,6 +20,7 @@ export default defineConfig({
         'bigrams': resolve(__dirname, 'bigrams.html'),
         'cell-phone-family-plan': resolve(__dirname, 'cell-phone-family-plan.html'),
         'madlibs': resolve(__dirname, 'madlibs.html'),
+        'final': resolve(__dirname, 'final.html'),
       },
       output: {
         manualChunks: {
