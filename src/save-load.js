@@ -321,6 +321,8 @@ function generatePythonTests(model, authors=null) {
     const data = model.modelData.toJSON();
     const { by, functions } = dealWithAuthors(model, authors);
     let text = `"""\n${data.testDocumentation || "Tests for the " + model.id + " module"}\n\nBy: ${by}\n"""\n\nimport pytest\n\nimport ` + model.id + `\n\n`;
+    if (data.testGlobalCode) { text += `${data.testGlobalCode}\n\n`; }
+
     for (const [key, func] of functions) {
         if (func.get("testable")) {
             const name = func.get("name")?.toString() || `function${key}`;

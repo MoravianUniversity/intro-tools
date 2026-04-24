@@ -38,9 +38,10 @@ export function makeModuleInspector(model, options) {
         div.appendChild(makeShowTestDocumentationCheckbox(funcs));
     }
     div.appendChild(makeGlobalCodeEditor(options, funcs));
+    div.appendChild(makeTestGlobalCodeEditor(options, funcs));
     if (options.adminMode) {
         div.appendChild(makeReadOnlySelect(funcs,
-            ['documentation', 'testDocumentation', 'globalCode']));
+            ['documentation', 'testDocumentation', 'globalCode', 'testGlobalCode']));
     }
     div.appendChild(makeProblemsDiv((listener) => model.addModelDataListener('problems', listener)));
 
@@ -183,4 +184,9 @@ function makeShowTestDocumentationCheckbox(funcs) {
 function makeGlobalCodeEditor(options, funcs) {
     return makeCodeEditorWithShowCheckbox(options, 'globalCode', funcs,
         'Global Code', '# Write your module-level code here (e.g. imports)\n');
+}
+
+function makeTestGlobalCodeEditor(options, funcs) {
+    return makeCodeEditorWithShowCheckbox(options, 'testGlobalCode', funcs,
+        'Test Global Code', '# Write code here to set up your tests (e.g. test imports, helper functions)\n');
 }

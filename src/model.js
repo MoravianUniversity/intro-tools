@@ -220,8 +220,12 @@ export class Model {
     //    authors (Y.Array of Y.Text; supports [#] in property for index access; value of null deletes the item)
     //    testDocumentation (Y.Text)
     //    globalCode (Y.Text)
+    //    testGlobalCode (Y.Text)
+    // TODO: move these to config and out of the model
     //    showTestDocumentation (boolean)
-    //    readOnly (boolean or array* of fixed strings) (should this be Y.Array instead?)
+    //    showGlobalCode (boolean)
+    //    showTestGlobalCode (boolean)
+    //    readOnly (boolean or array of fixed strings)
     updateModelData(property, value, cursorPos=null) {
         if (MODEL_DATA_TEXTS.includes(property)) {
             updateText(this.modelData, property, value, cursorPos);
@@ -491,9 +495,10 @@ export class Model {
     //    io (fixed string)
     //    testable (boolean)
     //    owner (string)
+    // TODO: move these to config and out of the model, and make more generic?
     //    showCode (boolean)
     //    showTestCode (boolean)
-    //    readOnly (boolean or array of fixed strings; not a Y.Array since edited infrequently)
+    //    readOnly (boolean or array of fixed strings)
     updateFunc(key, property, value, cursorPos=null) {
         const func = this.functions.get(key);
         if (!func) { console.error(`Function with key ${key} does not exist`); return; }
