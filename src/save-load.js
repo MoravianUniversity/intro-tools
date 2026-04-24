@@ -230,10 +230,10 @@ class EpydocDocstringFormatter extends DocstringFormatter {
     return(desc, type) { return wrapText48(`@return: ${desc}`) + "\n" + (type ? wrapText48(`@rtype: ${type}`) + "\n" : ""); }
 }
 const DOCSTYLES = {
-    "numpy": NumpyDocstringFormatter(),
-    "google": GoogleDocstringFormatter(),
-    "sphinx": SphinxDocstringFormatter(),
-    "epydoc": EpydocDocstringFormatter(),
+    "numpy": new NumpyDocstringFormatter(),
+    "google": new GoogleDocstringFormatter(),
+    "sphinx": new SphinxDocstringFormatter(),
+    "epydoc": new EpydocDocstringFormatter(),
 }
 function pythonDocstring(desc, options, params, returns) {
     let docstring = `    """\n${wrapText(desc)}\n\n`;
