@@ -1,0 +1,1 @@
+import{i}from"./function-planner-Dx0t8HoB.js";import"./ui-BOE0KQBr.js";import"./yjs-DU2MbpST.js";window.addEventListener("DOMContentLoaded",()=>{i("planner","madlibs",{title:"Mad Libs",minFunctions:10,minTestable:2})});
