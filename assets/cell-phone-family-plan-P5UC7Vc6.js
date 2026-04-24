@@ -1,0 +1,1 @@
+import{i as n}from"./function-planner-CKmk2wE4.js";import"./ui-BOE0KQBr.js";import"./yjs-DU2MbpST.js";const i={functions:[{key:1,name:"main",readOnly:["params","returns"]}],calls:[]};window.addEventListener("DOMContentLoaded",()=>{n("planner","cell-phone-family-plan",{initialModel:i,allowedTypes:["int","float","str","bool","list"],minFunctions:9,minTestable:5,adminMode:!1})});

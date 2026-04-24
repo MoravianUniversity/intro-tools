@@ -21,7 +21,7 @@ ${t}
 `+(n?R(`@type ${e}: ${n}`)+`
 `:"")}return(e,t){return R(`@return: ${e}`)+`
 `+(t?R(`@rtype: ${t}`)+`
-`:"")}}const Ue={numpy:In(),google:Bn(),sphinx:Rn(),epydoc:Wn()};function jn(s,e,t,n){let i=`    """
+`:"")}}const Ue={numpy:new In,google:new Bn,sphinx:new Rn,epydoc:new Wn};function jn(s,e,t,n){let i=`    """
 ${Be(s)}
 
 `;const o=(e.docStyle||"numpy").toLowerCase();Ue[o]||console.warn(`Unknown docstring style: ${o}. Defaulting to numpy style.`);const r=Ue[o]||Ue.numpy;r.paramHeader&&t.length>0&&(i+=`    ${r.paramHeader}`);for(const[a,l]of t.entries())i+=r.param(l.name||Vt(a),l.desc||"TODO",l.type);r.returnHeader&&n.length>0&&(t.length>0&&(i+=`
