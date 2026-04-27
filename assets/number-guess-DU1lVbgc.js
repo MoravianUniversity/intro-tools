@@ -1,4 +1,4 @@
-import{i as e}from"./function-planner-CKmk2wE4.js";import"./ui-BOE0KQBr.js";import"./yjs-DU2MbpST.js";window.addEventListener("DOMContentLoaded",()=>{e("planner","number-guess",{initialModel:{functions:[{key:1,name:"main",io:"indirect",code:`user_name = input("What's your name? ")
+import{i as e}from"./function-planner-B2iewCYN.js";import"./ui-BOE0KQBr.js";import"./yjs-DU2MbpST.js";window.addEventListener("DOMContentLoaded",()=>{e("planner","number-guess",{initialModel:{functions:[{key:1,name:"main",io:"indirect",code:`user_name = input("What's your name? ")
 play_one_game(user_name)`,showCode:!0,readOnly:!0},{key:2,name:"get_guess_outcome",desc:"Checks a guessed number against an actual value, returning a value based on if it is less than, more than, or equal to the actual value. It also looks for values that are 'not even close'.",params:[{name:"guessed",type:"int",desc:"the guessed number"},{name:"actual",type:"int",desc:"the actual number to be guessed (i.e. the answer)"}],returns:[{type:"str",desc:"the message to show"}],io:"none",testable:!0,code:`diff = guessed - actual
 if diff < 0:
     return 'Your guess was too low.'
