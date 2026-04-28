@@ -45,8 +45,8 @@ function downloadDataAsFile(filename, text, mime='text/plain') {
 }
 
 function wrapText(text, {width=80, indent=4, firstLineIndent=indent}={}) {
-    firstLineIndent = " ".repeat(firstLineIndent);
-    indent = " ".repeat(indent);
+    firstLineIndent = " ".repeat(firstLineIndent-1); // subtract 1 because we add a space before each word in the loop
+    indent = " ".repeat(indent-1);
     return text.split("\n").map((para, i) => {
         const lines = [];
         let curLine = i === 0 ? firstLineIndent : indent;
@@ -210,8 +210,8 @@ class DocstringFormatter {
     return(desc, type) { return ''; }
 }
 class NumpyDocstringFormatter extends DocstringFormatter {
-    paramHeader = 'Parameters\n----------\n';
-    returnHeader = 'Returns\n-------\n';
+    paramHeader = 'Parameters\n    ----------\n';
+    returnHeader = 'Returns\n    -------\n';
     param(name, desc, type) { return wrapText48(name + (type ? ` : ${type}` : "") + `\n${desc}\n`); }
     return(desc, type) { return wrapText48((type ? type : "object") + `\n${desc}\n`); }
 }
@@ -219,7 +219,7 @@ class GoogleDocstringFormatter extends DocstringFormatter {
     paramHeader = 'Args:\n';
     returnHeader = 'Returns:\n';
     param(name, desc, type) { return wrapText(`${name}${type ? ` (${type})` : ""}: ${desc}`, {indent: 12, firstLineIndent: 8}); }
-    return(desc, type) { return wrapText(`${type ? type : "object"}: ${desc}`, {indent: 12, firstLineIndent: 8}); }
+    return(desc, type) { return wrapText(`${type ? `${type}: ` : ""}${desc}`, {indent: 12, firstLineIndent: 8}); }
 }
 class SphinxDocstringFormatter extends DocstringFormatter {
     param(name, desc, type) { return wrapText48(`:param ${name}: ${desc}`) + "\n" + (type ? wrapText48(`:type ${name}: ${type}`) + "\n" : ""); }
@@ -251,13 +251,14 @@ function pythonDocstring(desc, options, params, returns) {
     for (const [i, ret] of returns.entries()) {
         docstring += formatter.return(ret.desc || "TODO", ret.type);
     }
-    docstring += `    """\n`;
+    docstring = docstring.trimEnd() + '\n    """\n';
     return docstring;
 }
 function authorString(authors) {
     return (authors.length === 0) ? 'TODO' :
          (authors.length === 1) ? authors[0] :
-         (authors.slice(0, -1).join(', ') + ' and ' + authors.slice(-1)[0])
+         (authors.length === 2) ? authors[0] + ' and ' + authors[1] :
+         (authors.slice(0, -1).join(', ') + ', and ' + authors.slice(-1)[0])
 }
 // if authors is null, use all authors and don't split it up
 // if authors is provided, only include those authors in the export (array or string)
