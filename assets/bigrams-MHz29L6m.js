@@ -1,4 +1,4 @@
-import{i as r}from"./function-planner-B2iewCYN.js";import"./ui-BOE0KQBr.js";import"./yjs-DU2MbpST.js";const i={functions:[{key:1,name:"main",io:"none",code:`# Read the corpus of words from the file
+import{i as r}from"./function-planner-DkwM4ZSn.js";import"./ui-BOE0KQBr.js";import"./yjs-DU2MbpST.js";const i={functions:[{key:1,name:"main",io:"none",code:`# Read the corpus of words from the file
 words = read_words("tom-swift.txt")
 
 print("===== New Story using Bigrams =====")
