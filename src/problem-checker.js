@@ -234,7 +234,7 @@ export function updateInterNodeProblems(model, options={}) {
 function linkProblems(model, fromKey, toKey) {
     const problems = [];
     const to = model.functions.get(toKey);
-    if (to.get("name")?.toString()?.trim() === 'main') { problems.push(["error", "link", "Main function should not be called by other functions."]); }
+    if (to?.get("name")?.toString()?.trim() === 'main') { problems.push(["error", "link", "Main function should not be called by other functions."]); }
     else if (toKey === fromKey) { problems.push(["warning", "link", "Recursive functions are tricky, be careful if this is what you intended."]); }
     return problems;
 }
