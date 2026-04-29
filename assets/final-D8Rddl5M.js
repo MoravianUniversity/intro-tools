@@ -1,1 +1,0 @@
-import{i as t}from"./function-planner-DkwM4ZSn.js";import"./ui-BOE0KQBr.js";import"./yjs-DU2MbpST.js";window.addEventListener("DOMContentLoaded",()=>{t("planner","final",{allowedTypes:["int","float","str","bool","list","tuple","dict","set","custom"],canClaimFuncs:!0})});
